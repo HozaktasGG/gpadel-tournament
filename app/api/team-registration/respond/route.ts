@@ -18,7 +18,6 @@ type EventRow = {
   id: string
   name: string
   date: string | null
-  time: string | null
   location: string | null
 }
 
@@ -34,7 +33,7 @@ function buildResponseEmail(args: {
     ? `✅ ${partnerName} takım davetini kabul etti!`
     : `❌ ${partnerName} takım davetini reddetti`
   const body = accepted
-    ? `<strong>${partnerName}</strong> "${teamName}" takımına partner olmayı kabul etti. Şimdi yöneticilerin onayını bekliyorsunuz — onaylandığında bilgilendirileceksiniz.`
+    ? `<strong>${partnerName}</strong> "${teamName}" takımına partner olmayı kabul etti. Şimdi yöneticilerin onayı bekleniyor — onaylandığında bilgilendirileceksiniz.`
     : `<strong>${partnerName}</strong> "${teamName}" takımı için davetinizi reddetti. Başka bir partner ile yeni bir kayıt oluşturabilirsiniz.`
 
   return `
@@ -43,25 +42,21 @@ function buildResponseEmail(args: {
         <h1 style="margin:0;font-size:22px;font-weight:bold;color:#ffffff;">SmashTorino</h1>
         <p style="margin:8px 0 0;font-size:14px;color:#ff6b35;font-weight:bold;">${headline}</p>
       </div>
-
       <div style="padding:32px 24px;">
         <p style="font-size:16px;color:#ffffff;margin:0 0 16px;">Merhaba <strong>${captainFirstName}</strong>,</p>
         <p style="font-size:15px;color:#e6f0ea;margin:0 0 24px;line-height:1.5;">${body}</p>
-
         <div style="background:#1a3d2e;border:1px solid #2d5a40;border-radius:12px;padding:20px;margin:0 0 24px;">
           <p style="margin:0 0 12px;font-size:13px;color:#9bb5a5;text-transform:uppercase;letter-spacing:1px;font-weight:bold;">Etkinlik</p>
           <p style="margin:0;font-size:18px;font-weight:bold;color:#ffffff;">${event.name}</p>
           ${event.date ? `<p style="margin:8px 0 0;font-size:14px;color:#e6f0ea;">📅 ${event.date}</p>` : ''}
+          ${event.location ? `<p style="margin:6px 0 0;font-size:14px;color:#e6f0ea;">📍 ${event.location}</p>` : ''}
         </div>
-
         <div style="text-align:center;margin:0 0 8px;">
-          <a href="https://smashtorino.com/dashboard"
-             style="display:inline-block;background:#ff6b35;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:12px 24px;border-radius:8px;">
+          <a href="https://smashtorino.com/dashboard" style="display:inline-block;background:#ff6b35;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;padding:12px 24px;border-radius:8px;">
             Dashboard'a Git
           </a>
         </div>
       </div>
-
       <div style="background:#0a1810;padding:18px 24px;text-align:center;border-top:1px solid #2d5a40;">
         <p style="margin:0;font-size:12px;color:#9bb5a5;">SmashTorino Padel Topluluğu</p>
       </div>
@@ -90,13 +85,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Yetkilendirme gerekli.' }, { status: 401 })
   }
 
-  const { data: registration, error: regErr } = await supabaseAdmin
+  const { data: registration } = await supabaseAdmin
     .from('team_registrations')
     .select('id, event_id, team_name, captain_id, partner_id, status')
     .eq('id', registration_id)
     .maybeSingle<RegistrationRow>()
 
-  if (regErr || !registration) {
+  if (!registration) {
     return NextResponse.json({ error: 'Davet bulunamadı.' }, { status: 404 })
   }
 
@@ -122,26 +117,29 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Güncelleme başarısız.' }, { status: 500 })
   }
 
-  const [{ data: eventData }, { data: captainProfile }, { data: partnerProfile }, { data: captainAuth }] = await Promise.all([
+  const [
+    { data: eventData },
+    { data: captainProfile },
+    { data: partnerProfile },
+  ] = await Promise.all([
     supabaseAdmin
       .from('events')
-      .select('id, name, date, time, location')
+      .select('id, name, date, location')
       .eq('id', registration.event_id)
       .maybeSingle<EventRow>(),
     supabaseAdmin
       .from('profiles')
-      .select('first_name, last_name')
+      .select('first_name, last_name, email')
       .eq('id', registration.captain_id)
-      .maybeSingle<{ first_name: string | null; last_name: string | null }>(),
+      .maybeSingle<{ first_name: string | null; last_name: string | null; email: string | null }>(),
     supabaseAdmin
       .from('profiles')
       .select('first_name, last_name')
       .eq('id', user.id)
       .maybeSingle<{ first_name: string | null; last_name: string | null }>(),
-    supabaseAdmin.auth.admin.getUserById(registration.captain_id),
   ])
 
-  const captainEmail = captainAuth?.user?.email
+  const captainEmail = captainProfile?.email
   const captainFirstName = captainProfile?.first_name || 'Kaptan'
   const partnerName = [partnerProfile?.first_name, partnerProfile?.last_name]
     .filter(Boolean).join(' ').trim() || 'Partner'
@@ -149,7 +147,7 @@ export async function POST(req: NextRequest) {
   if (captainEmail && eventData) {
     try {
       await resend.emails.send({
-        from: 'info@smashtorino.com',
+        from: 'SmashTorino <info@smashtorino.com>',
         to: captainEmail,
         subject: accepted
           ? `✅ ${partnerName} takım davetini kabul etti!`

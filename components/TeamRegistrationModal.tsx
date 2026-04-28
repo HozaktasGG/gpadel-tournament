@@ -19,13 +19,21 @@ type PartnerPreview = {
   avatar_url: string | null
 }
 
-function levelColors(level: string | null): { bg: string; text: string } {
+function levelTextClass(level: string | null): string {
   switch (level) {
-    case 'Advanced':     return { bg: 'rgba(234,179,8,0.2)',  text: '#eab308' }
-    case 'Intermediate': return { bg: 'rgba(59,130,246,0.2)', text: '#3b82f6' }
-    case 'Beginner':     return { bg: 'rgba(34,197,94,0.2)',  text: '#22c55e' }
-    default:             return { bg: 'rgba(107,114,128,0.2)', text: '#9ca3af' }
+    case 'Advanced':     return 'text-yellow-400'
+    case 'Intermediate': return 'text-blue-400'
+    case 'Beginner':     return 'text-green-400'
+    default:             return 'text-gray-400'
   }
+}
+
+function normalizeCode(raw: string): string {
+  let v = raw.trim().toUpperCase().replace(/\s+/g, '')
+  if (!v) return ''
+  if (v.startsWith('SMASH-')) return v
+  if (v.startsWith('SMASH')) return `SMASH-${v.slice(5)}`
+  return `SMASH-${v}`
 }
 
 export default function TeamRegistrationModal({ eventId, eventName, onClose, onSuccess }: Props) {
@@ -48,17 +56,8 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
     }
   }, [onClose])
 
-  const normalizeCode = (raw: string): string => {
-    let v = raw.trim().toUpperCase().replace(/\s+/g, '')
-    if (v && !v.startsWith('SMASH-')) {
-      v = v.startsWith('SMASH') ? `SMASH-${v.slice(5)}` : `SMASH-${v}`
-    }
-    return v
-  }
-
   const handleCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const v = e.target.value.toUpperCase().slice(0, 12)
-    setPartnerCode(v)
+    setPartnerCode(e.target.value.toUpperCase().slice(0, 12))
     setPartner(null)
     setError(null)
   }
@@ -123,38 +122,28 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
     }
   }
 
-  const partnerLevel = partner?.skill_level ?? null
-  const partnerColors = levelColors(partnerLevel)
   const partnerInitial = (partner?.first_name?.[0] ?? '?').toUpperCase()
   const partnerFullName = [partner?.first_name, partner?.last_name].filter(Boolean).join(' ').trim()
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 py-6"
-      style={{ backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)' }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center px-4 py-6 backdrop-blur-sm bg-black/60"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-2xl overflow-hidden"
-        style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+        className="w-full max-w-md rounded-2xl overflow-hidden bg-[#1a3d2e] border border-[#2d5a40]"
         onClick={e => e.stopPropagation()}
       >
-        <div
-          className="h-1.5 w-full"
-          style={{ background: '#0f2318' }}
-        >
+        <div className="h-1.5 w-full bg-[#0f2318]">
           <div
-            className="h-full transition-all duration-300"
-            style={{
-              backgroundColor: '#ff6b35',
-              width: step === 1 ? '50%' : '100%',
-            }}
+            className="h-full transition-all duration-300 bg-[#ff6b35]"
+            style={{ width: step === 1 ? '50%' : '100%' }}
           />
         </div>
 
-        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #2d5a40' }}>
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#ff6b35' }}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#2d5a40]">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#ff6b35]">
               Adım {step} / 2
             </p>
             <h2 className="text-lg font-bold text-white mt-0.5">
@@ -184,21 +173,15 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                 onChange={e => setTeamName(e.target.value.slice(0, 30))}
                 maxLength={30}
                 placeholder="Örn: Smash Bros"
-                className="w-full px-4 py-3 rounded-lg text-sm text-white outline-none"
-                style={{
-                  backgroundColor: '#0f2318',
-                  border: '1px solid #2d5a40',
-                }}
+                className="w-full px-4 py-3 rounded-lg text-sm text-white outline-none bg-[#0f2318] border border-[#2d5a40]"
                 autoFocus
               />
               <div className="flex justify-between items-center mt-2">
-                <p className="text-[11px] text-white/40">Takım adı (max 30 karakter)</p>
+                <p className="text-[11px] text-white/40">Max 30 karakter</p>
                 <p className="text-[11px] text-white/50 font-mono">{teamName.length}/30</p>
               </div>
 
-              {error && (
-                <p className="text-xs text-red-300 mt-3">{error}</p>
-              )}
+              {error && <p className="text-xs text-red-300 mt-3">{error}</p>}
 
               <button
                 type="button"
@@ -210,8 +193,8 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                   setError(null)
                   setStep(2)
                 }}
-                className="mt-5 w-full py-3 rounded-xl text-sm font-bold text-white"
-                style={{ backgroundColor: '#ff6b35' }}
+                disabled={!teamName.trim()}
+                className="mt-5 w-full py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35] disabled:opacity-50"
               >
                 Devam →
               </button>
@@ -230,19 +213,14 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                   onChange={handleCodeChange}
                   placeholder="SMASH-XXXX"
                   maxLength={10}
-                  className="flex-1 px-4 py-3 rounded-lg text-sm text-white outline-none font-mono uppercase tracking-wider"
-                  style={{
-                    backgroundColor: '#0f2318',
-                    border: '1px solid #2d5a40',
-                  }}
+                  className="flex-1 px-4 py-3 rounded-lg text-sm text-white outline-none font-mono uppercase tracking-wider bg-[#0f2318] border border-[#2d5a40]"
                   autoFocus
                 />
                 <button
                   type="button"
                   onClick={handleSearch}
                   disabled={searching || !partnerCode}
-                  className="px-4 rounded-lg text-sm font-bold text-white transition disabled:opacity-50"
-                  style={{ backgroundColor: '#2d5a40' }}
+                  className="px-4 rounded-lg text-sm font-bold text-white transition disabled:opacity-50 bg-[#2d5a40]"
                   aria-label="Ara"
                 >
                   {searching ? '...' : '🔍'}
@@ -253,10 +231,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
               </p>
 
               {partner && (
-                <div
-                  className="mt-4 rounded-xl p-4 flex items-center gap-3"
-                  style={{ backgroundColor: '#0f2318', border: '1px solid #ff6b35' }}
-                >
+                <div className="mt-4 rounded-xl p-4 flex items-center gap-3 bg-[#0f2318] border border-[#ff6b35]">
                   {partner.avatar_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -269,8 +244,8 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                     />
                   ) : (
                     <span
-                      className="flex items-center justify-center rounded-full text-base font-bold text-white flex-shrink-0"
-                      style={{ width: 48, height: 48, backgroundColor: '#ff6b35' }}
+                      className="flex items-center justify-center rounded-full text-base font-bold text-white flex-shrink-0 bg-[#ff6b35]"
+                      style={{ width: 48, height: 48 }}
                     >
                       {partnerInitial}
                     </span>
@@ -280,12 +255,9 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                       {partnerFullName || 'Oyuncu'}
                     </p>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      {partnerLevel && (
-                        <span
-                          className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold"
-                          style={{ background: partnerColors.bg, color: partnerColors.text }}
-                        >
-                          {partnerLevel}
+                      {partner.skill_level && (
+                        <span className={`text-[11px] font-bold ${levelTextClass(partner.skill_level)}`}>
+                          {partner.skill_level}
                         </span>
                       )}
                       {partner.skill_score != null && (
@@ -295,13 +267,11 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                       )}
                     </div>
                   </div>
-                  <span style={{ color: '#22c55e' }} className="text-xl flex-shrink-0">✓</span>
+                  <span className="text-xl flex-shrink-0 text-green-400">✓</span>
                 </div>
               )}
 
-              {error && (
-                <p className="text-xs text-red-300 mt-3">{error}</p>
-              )}
+              {error && <p className="text-xs text-red-300 mt-3">{error}</p>}
 
               <p className="text-[11px] text-white/50 mt-4 text-center">
                 Partnerinize onay emaili gönderilecektir.
@@ -311,8 +281,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                 <button
                   type="button"
                   onClick={() => { setError(null); setStep(1) }}
-                  className="flex-1 py-3 rounded-xl text-sm font-bold text-white"
-                  style={{ backgroundColor: 'transparent', border: '1px solid #2d5a40' }}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-transparent border border-[#2d5a40]"
                 >
                   ← Geri
                 </button>
@@ -320,8 +289,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                   type="button"
                   onClick={handleSubmit}
                   disabled={submitting || !partner}
-                  className="flex-1 py-3 rounded-xl text-sm font-bold text-white disabled:opacity-50"
-                  style={{ backgroundColor: '#ff6b35' }}
+                  className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35] disabled:opacity-50"
                 >
                   {submitting ? 'Kaydediliyor...' : 'Kayıt Ol 🎾'}
                 </button>
