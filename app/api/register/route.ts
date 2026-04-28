@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
   }
 
   const verifyLink = `https://smashtorino.com/verify?token=${inserted.id}`
+  const cancelLink = `https://smashtorino.com/cancel?token=${inserted.id}`
 
   await resend.emails.send({
     from: 'info@smashtorino.com',
@@ -76,6 +77,13 @@ export async function POST(req: NextRequest) {
         </div>
 
         <p style="font-size:13px;color:#888;margin-top:32px;">See you on the court!<br/><strong style="color:#333;">SmashTorino Padel Community</strong></p>
+
+        <hr style="border:none;border-top:1px solid #eee;margin:28px 0;" />
+        <p style="font-size:12px;color:#aaa;margin:0 0 12px;">Need to cancel? You can cancel your registration up to 24 hours before the tournament.</p>
+        <a href="${cancelLink}"
+           style="display:inline-block;background:#dc2626;color:#ffffff;text-decoration:none;font-size:13px;font-weight:bold;padding:10px 20px;border-radius:6px;">
+          Cancel Registration
+        </a>
       </div>
     `,
   })

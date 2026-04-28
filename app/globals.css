@@ -6,10 +6,19 @@
   html {
     scroll-behavior: smooth;
   }
+  html,
+  body {
+    background-color: #1a3d2e;
+  }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
 }
