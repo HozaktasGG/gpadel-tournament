@@ -146,26 +146,27 @@ export default function TeamRegisterSection({
         {toastEl}
         <div className="mt-6">
           <div
-            className="rounded-xl px-4 py-4 text-center"
+            className="rounded-xl px-4 py-4"
             style={{ backgroundColor: statusConfig.bg, border: `1px solid ${statusConfig.border}` }}
           >
-            <p className="text-sm font-bold" style={{ color: statusConfig.color }}>
-              {statusConfig.emoji} {statusConfig.text}
-            </p>
-            <p className="text-xs text-white/70 mt-1">
+            <div className="flex items-center justify-center gap-2 flex-wrap">
+              <p className="text-sm font-bold" style={{ color: statusConfig.color }}>
+                {statusConfig.emoji} {statusConfig.text}
+              </p>
+              {canCancel && (
+                <button
+                  type="button"
+                  onClick={handleCancel}
+                  disabled={canceling}
+                  className="border border-red-500 text-red-400 text-xs px-3 py-1 rounded-lg hover:bg-red-500/10 transition disabled:opacity-50"
+                >
+                  {canceling ? '...' : '🗑 Geri Çek'}
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-white/70 mt-2 text-center">
               Takım: <span className="font-bold text-white">{registration.team_name}</span>
             </p>
-            {canCancel && (
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={canceling}
-                className="mt-3 px-3 py-1.5 rounded-lg text-[11px] font-semibold disabled:opacity-50"
-                style={{ backgroundColor: 'transparent', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
-              >
-                {canceling ? '...' : '🗑 Geri Çek'}
-              </button>
-            )}
           </div>
 
           {registration.status === 'rejected' && (
