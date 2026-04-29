@@ -53,25 +53,41 @@ export default async function TournamentsPage({
 
   const events = (data ?? []) as EventRow[]
 
-  const eventCounts = await Promise.all(
-    events.map(async ev => {
-      if (ev.format === 'Team') {
-        const { count } = await supabase
+  const teamEventIds = events.filter(e => e.format === 'Team').map(e => e.id)
+  const americanoEventIds = events.filter(e => e.format !== 'Team').map(e => e.id)
+
+  const [teamRowsRes, regRowsRes] = await Promise.all([
+    teamEventIds.length
+      ? supabase
           .from('team_registrations')
-          .select('*', { count: 'exact', head: true })
-          .eq('event_id', ev.id)
+          .select('event_id')
+          .in('event_id', teamEventIds)
           .eq('status', 'approved')
-        return { id: ev.id, count: (count ?? 0) * 2 }
-      }
-      const { count } = await supabase
-        .from('event_registrations')
-        .select('*', { count: 'exact', head: true })
-        .eq('event_id', ev.id)
-        .eq('status', 'approved')
-      return { id: ev.id, count: count ?? 0 }
-    })
-  )
-  const countByEvent = Object.fromEntries(eventCounts.map(c => [c.id, c.count]))
+      : Promise.resolve({ data: [] as { event_id: string }[] }),
+    americanoEventIds.length
+      ? supabase
+          .from('event_registrations')
+          .select('event_id')
+          .in('event_id', americanoEventIds)
+          .eq('status', 'approved')
+      : Promise.resolve({ data: [] as { event_id: string }[] }),
+  ])
+
+  const teamCountMap = new Map<string, number>()
+  for (const r of (teamRowsRes.data ?? []) as { event_id: string }[]) {
+    teamCountMap.set(r.event_id, (teamCountMap.get(r.event_id) ?? 0) + 1)
+  }
+  const regCountMap = new Map<string, number>()
+  for (const r of (regRowsRes.data ?? []) as { event_id: string }[]) {
+    regCountMap.set(r.event_id, (regCountMap.get(r.event_id) ?? 0) + 1)
+  }
+
+  const countByEvent: Record<string, number> = {}
+  for (const ev of events) {
+    countByEvent[ev.id] = ev.format === 'Team'
+      ? (teamCountMap.get(ev.id) ?? 0) * 2
+      : (regCountMap.get(ev.id) ?? 0)
+  }
 
   return (
     <main
@@ -187,9 +203,18 @@ export default async function TournamentsPage({
                     className="mt-5 pt-4"
                     style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
                   >
-                    <p className="text-xs text-white/70 font-semibold mb-3">
-                      {countByEvent[ev.id] ?? 0} / {ev.max_players ?? 0} Spots Filled
-                    </p>
+                    {(() => {
+                      const filled = countByEvent[ev.id] ?? 0
+                      const cap = ev.max_players ?? 0
+                      const left = Math.max(0, cap - filled)
+                      const isFull = cap > 0 && filled >= cap
+                      return (
+                        <p className="text-xs text-white/70 font-semibold mb-3">
+                          {filled} / {cap} Spots Filled
+                          {cap > 0 && (isFull ? ' · Full' : ` · ${left} left`)}
+                        </p>
+                      )
+                    })()}
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-white/50">
                         {ev.entry_fee ? `€${ev.entry_fee}` : 'Free'}
