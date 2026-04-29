@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
 import TeamRegistrationModal from '@/components/TeamRegistrationModal'
 
@@ -16,6 +17,7 @@ type Props = {
   eventId: string
   eventName: string
   userId: string
+  userPhone: string | null
   initialRegistration?: TeamReg | null
 }
 
@@ -23,6 +25,7 @@ export default function TeamRegisterSection({
   eventId,
   eventName,
   userId,
+  userPhone,
   initialRegistration = null,
 }: Props) {
   const supabase = createClient()
@@ -32,6 +35,9 @@ export default function TeamRegisterSection({
   const [modalOpen, setModalOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [canceling, setCanceling] = useState(false)
+  const [showPhoneWarning, setShowPhoneWarning] = useState(false)
+
+  const hasPhone = !!userPhone && userPhone.trim() !== ''
 
   const loadRegistration = async () => {
     const { data } = await supabase
@@ -47,19 +53,28 @@ export default function TeamRegisterSection({
     setLoading(false)
   }
 
+  const handleRegisterClick = () => {
+    if (!hasPhone) {
+      setShowPhoneWarning(true)
+      return
+    }
+    setShowPhoneWarning(false)
+    setModalOpen(true)
+  }
+
   const handleCancel = async () => {
     if (!registration) return
-    if (!confirm('Bu takım davetini geri çekmek istediğinize emin misiniz?')) return
+    if (!confirm('Are you sure you want to cancel this team request?')) return
     setCanceling(true)
     const res = await fetch('/api/team-registration/cancel', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ registration_id: registration.id }),
     })
-    const data = await res.json().catch(() => ({}))
+    const data = await res.json().catch(() => ({} as { error?: string }))
     setCanceling(false)
     if (!res.ok) {
-      alert(data.error || 'İşlem başarısız.')
+      alert(data.error || 'Action failed.')
       return
     }
     router.refresh()
@@ -74,7 +89,7 @@ export default function TeamRegisterSection({
 
   const handleSuccess = (partnerName: string) => {
     setModalOpen(false)
-    setToast(`✅ Davet gönderildi! ${partnerName} daveti onayladıktan sonra kaydınız admin onayına geçecek.`)
+    setToast(`✅ Invite sent! Your registration will be confirmed once ${partnerName} accepts.`)
     loadRegistration()
     router.refresh()
   }
@@ -87,6 +102,15 @@ export default function TeamRegisterSection({
       aria-live="polite"
     >
       {toast}
+    </div>
+  ) : null
+
+  const phoneWarning = showPhoneWarning ? (
+    <div className="mt-3 bg-yellow-900/30 border border-yellow-500/30 rounded-xl p-4 text-yellow-300 text-sm">
+      <p>📱 You need to add a phone number to your profile before registering.</p>
+      <Link href="/profile" className="text-[#ff6b35] underline text-sm mt-2 inline-block">
+        Update Profile →
+      </Link>
     </div>
   ) : null
 
@@ -108,28 +132,28 @@ export default function TeamRegisterSection({
     const statusConfig = {
       pending_partner: {
         emoji: '⏳',
-        text: 'Partner onayı bekleniyor',
+        text: 'Waiting for partner approval',
         bg: 'rgba(234,179,8,0.12)',
         border: 'rgba(234,179,8,0.35)',
         color: '#eab308',
       },
       pending_approval: {
         emoji: '⏳',
-        text: 'Admin onayı bekleniyor',
+        text: 'Waiting for admin approval',
         bg: 'rgba(59,130,246,0.12)',
         border: 'rgba(59,130,246,0.35)',
         color: '#3b82f6',
       },
       approved: {
         emoji: '✅',
-        text: 'Kayıtlısınız',
+        text: 'Registered',
         bg: 'rgba(34,197,94,0.12)',
         border: 'rgba(34,197,94,0.35)',
         color: '#22c55e',
       },
       rejected: {
         emoji: '❌',
-        text: 'Kayıt reddedildi',
+        text: 'Registration rejected',
         bg: 'rgba(239,68,68,0.12)',
         border: 'rgba(239,68,68,0.35)',
         color: '#f87171',
@@ -160,25 +184,27 @@ export default function TeamRegisterSection({
                   disabled={canceling}
                   className="border border-red-500 text-red-400 text-xs px-3 py-1 rounded-lg hover:bg-red-500/10 transition disabled:opacity-50"
                 >
-                  {canceling ? '...' : '🗑 Geri Çek'}
+                  {canceling ? '...' : '🗑 Cancel Request'}
                 </button>
               )}
             </div>
             <p className="text-xs text-white/70 mt-2 text-center">
-              Takım: <span className="font-bold text-white">{registration.team_name}</span>
+              Team: <span className="font-bold text-white">{registration.team_name}</span>
             </p>
           </div>
 
           {registration.status === 'rejected' && (
             <button
               type="button"
-              onClick={() => setModalOpen(true)}
+              onClick={handleRegisterClick}
               className="mt-3 w-full py-3 rounded-xl text-sm font-bold text-white"
               style={{ backgroundColor: '#ff6b35' }}
             >
-              🎾 Tekrar Kayıt Ol
+              🎾 Register Again
             </button>
           )}
+
+          {phoneWarning}
 
           {modalOpen && (
             <TeamRegistrationModal
@@ -199,11 +225,13 @@ export default function TeamRegisterSection({
       <div className="mt-6">
         <button
           type="button"
-          onClick={() => setModalOpen(true)}
+          onClick={handleRegisterClick}
           className="w-full bg-[#ff6b35] text-white font-bold rounded-xl px-6 py-3 transition hover:brightness-110"
         >
-          🎾 Takım Olarak Kayıt Ol
+          🎾 Register as a Team
         </button>
+
+        {phoneWarning}
 
         {modalOpen && (
           <TeamRegistrationModal

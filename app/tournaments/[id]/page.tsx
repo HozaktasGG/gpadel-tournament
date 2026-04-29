@@ -31,6 +31,13 @@ type Participant = {
   profile: Profile | null
 }
 
+type ApprovedTeam = {
+  id: string
+  team_name: string
+  captain_id: string | null
+  partner_id: string | null
+}
+
 type TournamentMatchView = {
   id: string
   court_number: number
@@ -148,56 +155,103 @@ export default async function TournamentDetailPage({
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { count: registeredCount } = await supabase
-    .from('event_registrations')
-    .select('*', { count: 'exact', head: true })
-    .eq('event_id', ev.id)
-    .eq('status', 'approved')
+  const isTeamFormat = ev.format === 'Team'
 
   let isRegistered = false
   let registrationId: string | null = null
   let participants: Participant[] | null = null
+  let approvedTeams: ApprovedTeam[] = []
+  let teamPlayerProfiles: Map<string, Profile> = new Map()
+  let userPhone: string | null = null
+  let filled = 0
 
-  if (user) {
-    const { data: myReg } = await supabase
-      .from('event_registrations')
-      .select('id, status')
-      .eq('event_id', ev.id)
-      .eq('user_id', user.id)
-      .maybeSingle()
-    if (myReg?.status === 'approved') {
-      isRegistered = true
-      registrationId = myReg.id
-    }
-
-    // Two-query approach — works regardless of FK constraints
-    const { data: regRows, error: regError } = await supabase
-      .from('event_registrations')
-      .select('user_id')
+  if (isTeamFormat) {
+    const { count: teamCount } = await supabase
+      .from('team_registrations')
+      .select('*', { count: 'exact', head: true })
       .eq('event_id', ev.id)
       .eq('status', 'approved')
+    filled = (teamCount ?? 0) * 2
 
-    if (regError) {
-      console.error('Registrations error:', regError)
-    } else if (regRows && regRows.length > 0) {
-      const userIds = regRows.map(r => r.user_id)
-      const { data: profileRows, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, first_name, last_name, avatar_url, skill_score, skill_level')
-        .in('id', userIds)
+    if (user) {
+      const { data: teamsData } = await supabase
+        .from('team_registrations')
+        .select('id, team_name, captain_id, partner_id')
+        .eq('event_id', ev.id)
+        .eq('status', 'approved')
+      approvedTeams = (teamsData ?? []) as ApprovedTeam[]
 
-      if (profileError) {
-        console.error('Profiles error:', profileError)
+      const playerIds = approvedTeams
+        .flatMap(t => [t.captain_id, t.partner_id])
+        .filter((p): p is string => !!p)
+
+      if (playerIds.length > 0) {
+        const { data: profileRows } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, avatar_url, skill_score, skill_level')
+          .in('id', playerIds)
+        teamPlayerProfiles = new Map(
+          ((profileRows ?? []) as Profile[]).map(p => [p.id, p])
+        )
+      }
+    }
+  } else {
+    const { count: registeredCount } = await supabase
+      .from('event_registrations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', ev.id)
+      .eq('status', 'approved')
+    filled = registeredCount ?? 0
+
+    if (user) {
+      const { data: myReg } = await supabase
+        .from('event_registrations')
+        .select('id, status')
+        .eq('event_id', ev.id)
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (myReg?.status === 'approved') {
+        isRegistered = true
+        registrationId = myReg.id
       }
 
-      const profileMap = new Map((profileRows ?? []).map(p => [p.id, p as Profile]))
-      participants = regRows.map(r => ({
-        user_id: r.user_id,
-        profile: profileMap.get(r.user_id) ?? null,
-      }))
-    } else {
-      participants = []
+      const { data: regRows, error: regError } = await supabase
+        .from('event_registrations')
+        .select('user_id')
+        .eq('event_id', ev.id)
+        .eq('status', 'approved')
+
+      if (regError) {
+        console.error('Registrations error:', regError)
+      } else if (regRows && regRows.length > 0) {
+        const userIds = regRows.map(r => r.user_id)
+        const { data: profileRows, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, first_name, last_name, avatar_url, skill_score, skill_level')
+          .in('id', userIds)
+
+        if (profileError) {
+          console.error('Profiles error:', profileError)
+        }
+
+        const profileMap = new Map(((profileRows ?? []) as Profile[]).map(p => [p.id, p]))
+        participants = regRows.map(r => ({
+          user_id: r.user_id,
+          profile: profileMap.get(r.user_id) ?? null,
+        }))
+      } else {
+        participants = []
+      }
     }
+  }
+
+  if (user) {
+    const { data: phoneRow } = await supabase
+      .from('profiles')
+      .select('phone')
+      .eq('id', user.id)
+      .maybeSingle<{ phone: string | null }>()
+    userPhone = phoneRow?.phone ?? null
   }
 
   const sorted = participants
@@ -207,7 +261,6 @@ export default async function TournamentDetailPage({
     : null
 
   const capacity = ev.max_players ?? 0
-  const filled = registeredCount ?? 0
   const remaining = Math.max(0, capacity - filled)
   const isFull = capacity > 0 && filled >= capacity
   const isFinished = ev.date < todayString() || ev.status === 'finished' || ev.status === 'completed'
@@ -270,7 +323,7 @@ export default async function TournamentDetailPage({
           })),
       }))
 
-      // Final Standings — Round 4 kort sonuçlarına göre
+      // Final Standings — based on Round 4 court results
       const round4Id = (rounds as any[]).find((r: any) => r.round_number === 4)?.id
       const round4Matches = (matches as any[])
         .filter(m => m.round_id === round4Id)
@@ -394,9 +447,79 @@ export default async function TournamentDetailPage({
                   <Link href={`/signin?redirect=/tournaments/${ev.id}`} className="font-semibold underline" style={{ color: '#ff6b35' }}>
                     Sign in
                   </Link>{' '}
-                  to see participants
+                  to see {isTeamFormat ? 'teams' : 'participants'}
                 </p>
               </div>
+            ) : isTeamFormat ? (
+              approvedTeams.length > 0 ? (
+                <div>
+                  <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">
+                    Teams ({approvedTeams.length})
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {approvedTeams.map(team => {
+                      const captain = team.captain_id ? teamPlayerProfiles.get(team.captain_id) ?? null : null
+                      const partner = team.partner_id ? teamPlayerProfiles.get(team.partner_id) ?? null : null
+                      const renderPlayer = (prof: Profile | null, key: string) => {
+                        const firstName = prof?.first_name ?? ''
+                        const lastName = prof?.last_name ?? ''
+                        const name = [firstName, lastName].filter(Boolean).join(' ') || 'Player'
+                        const initial = (firstName[0] ?? name[0] ?? '?').toUpperCase()
+                        const level = prof?.skill_level ?? null
+                        const { bg: levelBg, color: levelColor } = skillLevelStyle(level)
+                        return (
+                          <div key={key} className="flex items-center gap-2 min-w-0">
+                            {prof?.avatar_url ? (
+                              <img
+                                src={prof.avatar_url}
+                                alt={name}
+                                width={32}
+                                height={32}
+                                className="rounded-full object-cover flex-shrink-0"
+                                style={{ width: 32, height: 32 }}
+                              />
+                            ) : (
+                              <span
+                                className="flex-shrink-0 flex items-center justify-center rounded-full text-xs font-bold text-white"
+                                style={{ width: 32, height: 32, backgroundColor: '#ff6b35' }}
+                              >
+                                {initial}
+                              </span>
+                            )}
+                            <div className="min-w-0">
+                              <p className="text-white text-sm font-medium truncate">{name}</p>
+                              {level && (
+                                <span
+                                  className="inline-block text-[10px] font-bold px-1.5 py-0.5 rounded-full mt-0.5"
+                                  style={{ backgroundColor: levelBg, color: levelColor }}
+                                >
+                                  {level}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      }
+                      return (
+                        <div
+                          key={team.id}
+                          className="bg-[#0f2318] border border-[#2d5a40] rounded-xl p-4"
+                        >
+                          <p className="text-[#ff6b35] font-bold text-sm uppercase tracking-wide mb-3 truncate">
+                            {team.team_name}
+                          </p>
+                          <div className="grid grid-cols-2 gap-3">
+                            {renderPlayer(captain, 'c')}
+                            {renderPlayer(partner, 'p')}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-white/50 text-center py-3">No teams registered yet.</p>
+              )
             ) : sorted && sorted.length > 0 ? (
               <div>
                 <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">
@@ -488,7 +611,7 @@ export default async function TournamentDetailPage({
                 Match Results
               </p>
 
-              {/* Final Standings — Round 4 kort sonuçlarına göre */}
+              {/* Final Standings — based on Round 4 court results */}
               {tournamentResults.standings.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold text-white/90 mb-3">🏆 Final Standings</h3>
@@ -680,6 +803,7 @@ export default async function TournamentDetailPage({
                 eventId={ev.id}
                 eventName={ev.name}
                 userId={user.id}
+                userPhone={userPhone}
                 initialRegistration={await loadInitialTeamRegistration(supabase, ev.id, user.id)}
               />
             ) : (

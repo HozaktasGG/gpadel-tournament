@@ -12,18 +12,18 @@ export async function DELETE(req: NextRequest) {
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'Geçersiz istek.' }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
 
   const registration_id = body.registration_id?.trim()
   if (!registration_id) {
-    return NextResponse.json({ error: 'Geçersiz istek.' }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Yetkilendirme gerekli.' }, { status: 401 })
+    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 })
   }
 
   const { data: registration } = await supabaseAdmin
@@ -33,7 +33,7 @@ export async function DELETE(req: NextRequest) {
     .maybeSingle<RegistrationRow>()
 
   if (!registration) {
-    return NextResponse.json({ error: 'Kayıt bulunamadı.' }, { status: 404 })
+    return NextResponse.json({ error: 'Registration not found.' }, { status: 404 })
   }
 
   const isCaptain = registration.captain_id === user.id
@@ -49,7 +49,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   if (!isCaptain && !isAdmin) {
-    return NextResponse.json({ error: 'Bu kaydı silme yetkiniz yok.' }, { status: 403 })
+    return NextResponse.json({ error: 'You are not authorized to delete this record.' }, { status: 403 })
   }
 
   const { error: deleteErr } = await supabaseAdmin
@@ -58,7 +58,7 @@ export async function DELETE(req: NextRequest) {
     .eq('id', registration.id)
 
   if (deleteErr) {
-    return NextResponse.json({ error: 'Silme başarısız.' }, { status: 500 })
+    return NextResponse.json({ error: 'Delete failed.' }, { status: 500 })
   }
 
   return NextResponse.json({ success: true })

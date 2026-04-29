@@ -9,6 +9,7 @@ type Profile = {
   first_name: string | null
   last_name: string | null
   email: string | null
+  phone: string | null
   avatar_url: string | null
   skill_score: number | null
   skill_level: string | null
@@ -62,7 +63,7 @@ export default async function DashboardPage() {
   const { data: profileData } = await supabase
     .from('profiles')
     .select(
-      'id, first_name, last_name, email, avatar_url, skill_score, skill_level, quiz_completed_at, last_score_change'
+      'id, first_name, last_name, email, phone, avatar_url, skill_score, skill_level, quiz_completed_at, last_score_change'
     )
     .eq('id', user.id)
     .maybeSingle()
@@ -293,7 +294,7 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        <TeamInvitesSection userId={user.id} />
+        <TeamInvitesSection userId={user.id} userPhone={profile?.phone ?? null} />
 
         {past.length > 0 && (
           <section className="mt-10">

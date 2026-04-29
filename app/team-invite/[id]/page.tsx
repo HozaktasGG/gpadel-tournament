@@ -41,7 +41,7 @@ function unwrap<T>(v: T | T[] | null): T | null {
 function formatDate(date: string | null): string {
   if (!date) return ''
   try {
-    return new Date(date + 'T00:00:00').toLocaleDateString('tr-TR', {
+    return new Date(date + 'T00:00:00').toLocaleDateString('en-US', {
       weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
     })
   } catch {
@@ -75,13 +75,13 @@ export default function TeamInvitePage() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Bir hata oluştu.')
+        setError(data.error || 'An error occurred.')
         setResponding(false)
         return
       }
       setResult(action === 'accept' ? 'accepted' : 'rejected')
     } catch {
-      setError('Bağlantı hatası. Lütfen tekrar deneyin.')
+      setError('Connection error. Please try again.')
     } finally {
       setResponding(false)
     }
@@ -109,7 +109,7 @@ export default function TeamInvitePage() {
       if (cancelled) return
 
       if (fetchError || !data) {
-        setError('Davet bulunamadı.')
+        setError('Invite not found.')
         setLoading(false)
         return
       }
@@ -158,10 +158,10 @@ export default function TeamInvitePage() {
       <main className="min-h-screen flex items-center justify-center px-4 bg-[#0f2318]">
         <div className="max-w-md w-full rounded-2xl p-8 text-center bg-[#1a3d2e] border border-[#2d5a40]">
           <div className="text-5xl mb-4">😕</div>
-          <h1 className="text-xl font-bold text-white mb-2">Davet Bulunamadı</h1>
+          <h1 className="text-xl font-bold text-white mb-2">Invite Not Found</h1>
           <p className="text-sm text-white/70 mb-6">{error}</p>
           <Link href="/" className="inline-block px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35]">
-            Anasayfa
+            Home
           </Link>
         </div>
       </main>
@@ -173,12 +173,12 @@ export default function TeamInvitePage() {
       <main className="min-h-screen flex items-center justify-center px-4 bg-[#0f2318]">
         <div className="max-w-md w-full rounded-2xl p-8 text-center bg-[#1a3d2e] border border-[#2d5a40]">
           <div className="text-6xl mb-4">🎉</div>
-          <h1 className="text-2xl font-bold text-white mb-2">Daveti Kabul Ettiniz!</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">You Accepted the Invite!</h1>
           <p className="text-sm text-white/80 mb-6">
-            <strong className="text-[#ff6b35]">"{registration?.team_name}"</strong> takımına katıldın. Turnuvada görüşürüz! 🎾
+            You joined <strong className="text-[#ff6b35]">&quot;{registration?.team_name}&quot;</strong>. See you at the tournament! 🎾
           </p>
           <Link href="/dashboard" className="inline-block px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35]">
-            Dashboard'a Git
+            Go to Dashboard
           </Link>
         </div>
       </main>
@@ -190,10 +190,10 @@ export default function TeamInvitePage() {
       <main className="min-h-screen flex items-center justify-center px-4 bg-[#0f2318]">
         <div className="max-w-md w-full rounded-2xl p-8 text-center bg-[#1a3d2e] border border-[#2d5a40]">
           <div className="text-6xl mb-4">👋</div>
-          <h1 className="text-2xl font-bold text-white mb-2">Davet Reddedildi</h1>
-          <p className="text-sm text-white/80 mb-6">Daveti reddettin. Kaptan bilgilendirildi.</p>
+          <h1 className="text-2xl font-bold text-white mb-2">Invite Declined</h1>
+          <p className="text-sm text-white/80 mb-6">You declined the invite. The captain has been notified.</p>
           <Link href="/" className="inline-block px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35]">
-            Anasayfa
+            Home
           </Link>
         </div>
       </main>
@@ -204,9 +204,9 @@ export default function TeamInvitePage() {
 
   if (registration.status !== 'pending_partner') {
     const info = {
-      pending_approval: { emoji: '⏳', title: 'Onay Bekleniyor', text: 'Bu davete zaten yanıt verdin. Yöneticilerin onayı bekleniyor.' },
-      approved: { emoji: '✅', title: 'Takım Onaylandı', text: 'Bu takım zaten onaylandı.' },
-      rejected: { emoji: '❌', title: 'Davet Reddedildi', text: 'Bu davet reddedildi.' },
+      pending_approval: { emoji: '⏳', title: 'Awaiting Approval', text: 'You already responded to this invite. Awaiting admin approval.' },
+      approved: { emoji: '✅', title: 'Team Approved', text: 'This team is already approved.' },
+      rejected: { emoji: '❌', title: 'Invite Declined', text: 'This invite has been declined.' },
     }[registration.status]
 
     return (
@@ -216,7 +216,7 @@ export default function TeamInvitePage() {
           <h1 className="text-2xl font-bold text-white mb-2">{info.title}</h1>
           <p className="text-sm text-white/80 mb-6">{info.text}</p>
           <Link href="/dashboard" className="inline-block px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35]">
-            Dashboard'a Git
+            Go to Dashboard
           </Link>
         </div>
       </main>
@@ -224,7 +224,7 @@ export default function TeamInvitePage() {
   }
 
   const captain = registration.captain
-  const captainName = [captain?.first_name, captain?.last_name].filter(Boolean).join(' ').trim() || 'Bir oyuncu'
+  const captainName = [captain?.first_name, captain?.last_name].filter(Boolean).join(' ').trim() || 'A player'
   const captainInitial = (captain?.first_name?.[0] ?? '?').toUpperCase()
   const event = registration.event
 
@@ -233,8 +233,8 @@ export default function TeamInvitePage() {
       <div className="max-w-md mx-auto">
         <div className="rounded-2xl overflow-hidden bg-[#1a3d2e] border border-[#2d5a40]">
           <div className="px-6 py-5 text-center bg-[#0f2318]" style={{ borderBottom: '3px solid #ff6b35' }}>
-            <p className="text-xs font-bold uppercase tracking-widest text-[#ff6b35]">🎾 Takım Daveti</p>
-            <h1 className="text-xl font-bold text-white mt-2">Sana bir davet var!</h1>
+            <p className="text-xs font-bold uppercase tracking-widest text-[#ff6b35]">🎾 Team Invite</p>
+            <h1 className="text-xl font-bold text-white mt-2">You have an invite!</h1>
           </div>
 
           <div className="p-6">
@@ -258,19 +258,19 @@ export default function TeamInvitePage() {
                 </span>
               )}
               <div className="flex-1 min-w-0">
-                <p className="text-xs text-white/60 uppercase tracking-wide font-semibold">Kaptan</p>
+                <p className="text-xs text-white/60 uppercase tracking-wide font-semibold">Captain</p>
                 <p className="text-base font-bold text-white truncate">{captainName}</p>
               </div>
             </div>
 
             <div className="rounded-xl p-4 mb-4 bg-[#0f2318] border border-[#2d5a40]">
-              <p className="text-xs text-white/60 uppercase tracking-wide font-semibold mb-1">Takım Adı</p>
+              <p className="text-xs text-white/60 uppercase tracking-wide font-semibold mb-1">Team Name</p>
               <p className="text-2xl font-bold text-[#ff6b35]">{registration.team_name}</p>
             </div>
 
             {event && (
               <div className="rounded-xl p-4 mb-6 bg-[#0f2318] border border-[#2d5a40]">
-                <p className="text-xs text-white/60 uppercase tracking-wide font-semibold mb-2">Etkinlik</p>
+                <p className="text-xs text-white/60 uppercase tracking-wide font-semibold mb-2">Event</p>
                 <p className="text-base font-bold text-white mb-2">{event.name}</p>
                 {event.date && <p className="text-xs text-white/80">📅 {formatDate(event.date)}</p>}
                 {event.location && <p className="text-xs text-white/80 mt-1">📍 {event.location}</p>}
@@ -286,7 +286,7 @@ export default function TeamInvitePage() {
                 disabled={responding}
                 className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50 bg-[#ff6b35]"
               >
-                {responding ? 'İşleniyor...' : '✅ Daveti Kabul Et'}
+                {responding ? 'Processing...' : '✅ Accept Invite'}
               </button>
               <button
                 type="button"
@@ -294,7 +294,7 @@ export default function TeamInvitePage() {
                 disabled={responding}
                 className="w-full py-3.5 rounded-xl text-sm font-bold text-white/80 transition disabled:opacity-50 bg-transparent border border-[#2d5a40]"
               >
-                Reddet
+                Decline
               </button>
             </div>
           </div>

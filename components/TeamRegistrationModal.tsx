@@ -67,7 +67,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
     setPartner(null)
     const code = normalizeCode(partnerCode)
     if (!code || code.length < 7) {
-      setError('Geçerli bir oyuncu kodu girin.')
+      setError('Please enter a valid player code.')
       return
     }
     setSearching(true)
@@ -78,7 +78,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
       .maybeSingle<PartnerPreview>()
     setSearching(false)
     if (!data) {
-      setError('Oyuncu kodu bulunamadı.')
+      setError('Player code not found.')
       return
     }
     setPartner(data)
@@ -88,12 +88,12 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
   const handleSubmit = async () => {
     setError(null)
     if (!teamName.trim()) {
-      setError('Takım adı boş olamaz.')
+      setError('Team name cannot be empty.')
       setStep(1)
       return
     }
     if (!partner) {
-      setError('Önce partneri arayın.')
+      setError('Search for your partner first.')
       return
     }
     setSubmitting(true)
@@ -109,7 +109,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Kayıt sırasında bir hata oluştu.')
+        setError(data.error || 'An error occurred during registration.')
         setSubmitting(false)
         return
       }
@@ -117,7 +117,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
         [partner.first_name, partner.last_name].filter(Boolean).join(' ').trim() || 'Partner'
       onSuccess(partnerName)
     } catch {
-      setError('Bağlantı hatası. Lütfen tekrar deneyin.')
+      setError('Connection error. Please try again.')
       setSubmitting(false)
     }
   }
@@ -144,10 +144,10 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
         <div className="flex items-center justify-between px-5 py-4 border-b border-[#2d5a40]">
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-widest text-[#ff6b35]">
-              Adım {step} / 2
+              Step {step} / 2
             </p>
             <h2 className="text-lg font-bold text-white mt-0.5">
-              {step === 1 ? 'Takım Adı' : 'Partner Kodu'}
+              {step === 1 ? 'Team Name' : 'Partner Code'}
             </h2>
             <p className="text-xs text-white/60 mt-0.5 truncate">{eventName}</p>
           </div>
@@ -155,7 +155,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
             type="button"
             onClick={onClose}
             className="text-white/60 hover:text-white text-2xl leading-none px-2"
-            aria-label="Kapat"
+            aria-label="Close"
           >
             ×
           </button>
@@ -165,19 +165,19 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
           {step === 1 && (
             <>
               <label className="block text-xs font-semibold text-white/70 mb-2">
-                Takımına bir isim ver
+                Give your team a name
               </label>
               <input
                 type="text"
                 value={teamName}
                 onChange={e => setTeamName(e.target.value.slice(0, 30))}
                 maxLength={30}
-                placeholder="Örn: Smash Bros"
+                placeholder="e.g. Smash Bros"
                 className="w-full px-4 py-3 rounded-lg text-sm text-white outline-none bg-[#0f2318] border border-[#2d5a40]"
                 autoFocus
               />
               <div className="flex justify-between items-center mt-2">
-                <p className="text-[11px] text-white/40">Max 30 karakter</p>
+                <p className="text-[11px] text-white/40">Max 30 characters</p>
                 <p className="text-[11px] text-white/50 font-mono">{teamName.length}/30</p>
               </div>
 
@@ -187,7 +187,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                 type="button"
                 onClick={() => {
                   if (!teamName.trim()) {
-                    setError('Takım adı boş olamaz.')
+                    setError('Team name cannot be empty.')
                     return
                   }
                   setError(null)
@@ -196,7 +196,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                 disabled={!teamName.trim()}
                 className="mt-5 w-full py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35] disabled:opacity-50"
               >
-                Devam →
+                Continue →
               </button>
             </>
           )}
@@ -204,7 +204,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
           {step === 2 && (
             <>
               <label className="block text-xs font-semibold text-white/70 mb-2">
-                Partnerinin oyuncu kodu
+                Your partner&apos;s player code
               </label>
               <div className="flex gap-2">
                 <input
@@ -221,13 +221,13 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                   onClick={handleSearch}
                   disabled={searching || !partnerCode}
                   className="px-4 rounded-lg text-sm font-bold text-white transition disabled:opacity-50 bg-[#2d5a40]"
-                  aria-label="Ara"
+                  aria-label="Search"
                 >
                   {searching ? '...' : '🔍'}
                 </button>
               </div>
               <p className="text-[11px] text-white/40 mt-2">
-                Partnerinin profil sayfasındaki kodu girin.
+                Enter the code from your partner&apos;s profile page.
               </p>
 
               {partner && (
@@ -252,7 +252,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-white truncate">
-                      {partnerFullName || 'Oyuncu'}
+                      {partnerFullName || 'Player'}
                     </p>
                     <div className="flex items-center gap-2 mt-1 flex-wrap">
                       {partner.skill_level && (
@@ -274,7 +274,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
               {error && <p className="text-xs text-red-300 mt-3">{error}</p>}
 
               <p className="text-[11px] text-white/50 mt-4 text-center">
-                Partnerinize onay emaili gönderilecektir.
+                Your partner will see this invitation in their dashboard.
               </p>
 
               <div className="flex gap-2 mt-4">
@@ -283,7 +283,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                   onClick={() => { setError(null); setStep(1) }}
                   className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-transparent border border-[#2d5a40]"
                 >
-                  ← Geri
+                  ← Back
                 </button>
                 <button
                   type="button"
@@ -291,7 +291,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
                   disabled={submitting || !partner}
                   className="flex-1 py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35] disabled:opacity-50"
                 >
-                  {submitting ? 'Kaydediliyor...' : 'Kayıt Ol 🎾'}
+                  {submitting ? 'Registering...' : 'Register 🎾'}
                 </button>
               </div>
             </>

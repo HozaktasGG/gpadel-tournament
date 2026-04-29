@@ -13,20 +13,20 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'Geçersiz istek.' }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
 
   const registration_id = body.registration_id?.trim()
   const action = body.action
 
   if (!registration_id || (action !== 'accept' && action !== 'reject')) {
-    return NextResponse.json({ error: 'Geçersiz istek.' }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
 
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Yetkilendirme gerekli.' }, { status: 401 })
+    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 })
   }
 
   const { data: registration } = await supabaseAdmin
@@ -36,18 +36,33 @@ export async function POST(req: NextRequest) {
     .maybeSingle<RegistrationRow>()
 
   if (!registration) {
-    return NextResponse.json({ error: 'Davet bulunamadı.' }, { status: 404 })
+    return NextResponse.json({ error: 'Invite not found.' }, { status: 404 })
   }
 
   if (registration.partner_id !== user.id) {
-    return NextResponse.json({ error: 'Bu daveti yanıtlama yetkiniz yok.' }, { status: 403 })
+    return NextResponse.json({ error: 'You are not authorized to respond to this invite.' }, { status: 403 })
   }
 
   if (registration.status !== 'pending_partner') {
-    return NextResponse.json({ error: 'Bu davet zaten yanıtlandı.' }, { status: 409 })
+    return NextResponse.json({ error: 'This invite has already been responded to.' }, { status: 409 })
   }
 
   const accepted = action === 'accept'
+
+  if (accepted) {
+    const { data: profile } = await supabaseAdmin
+      .from('profiles')
+      .select('phone')
+      .eq('id', user.id)
+      .maybeSingle<{ phone: string | null }>()
+
+    if (!profile?.phone || profile.phone.trim() === '') {
+      return NextResponse.json(
+        { error: 'Please add a phone number to your profile first.' },
+        { status: 400 }
+      )
+    }
+  }
 
   const { error: updateErr } = await supabaseAdmin
     .from('team_registrations')
@@ -58,7 +73,7 @@ export async function POST(req: NextRequest) {
     .eq('id', registration.id)
 
   if (updateErr) {
-    return NextResponse.json({ error: 'Güncelleme başarısız.' }, { status: 500 })
+    return NextResponse.json({ error: 'Update failed.' }, { status: 500 })
   }
 
   return NextResponse.json({

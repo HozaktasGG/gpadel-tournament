@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: 'Geçersiz istek.' }, { status: 400 })
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
 
   const event_id = body.event_id?.trim()
@@ -22,10 +22,10 @@ export async function POST(req: NextRequest) {
   const rawCode = body.partner_code?.trim().toUpperCase()
 
   if (!event_id || !team_name || !rawCode) {
-    return NextResponse.json({ error: 'Tüm alanlar zorunludur.' }, { status: 400 })
+    return NextResponse.json({ error: 'All fields are required.' }, { status: 400 })
   }
   if (team_name.length > 30) {
-    return NextResponse.json({ error: 'Takım adı en fazla 30 karakter olabilir.' }, { status: 400 })
+    return NextResponse.json({ error: 'Team name can be at most 30 characters.' }, { status: 400 })
   }
 
   const partner_code = rawCode.startsWith('SMASH-') ? rawCode : `SMASH-${rawCode}`
@@ -33,7 +33,20 @@ export async function POST(req: NextRequest) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Yetkilendirme gerekli.' }, { status: 401 })
+    return NextResponse.json({ error: 'Authentication required.' }, { status: 401 })
+  }
+
+  const { data: captainProfile } = await supabaseAdmin
+    .from('profiles')
+    .select('phone')
+    .eq('id', user.id)
+    .maybeSingle<{ phone: string | null }>()
+
+  if (!captainProfile?.phone || captainProfile.phone.trim() === '') {
+    return NextResponse.json(
+      { error: 'Please add a phone number to your profile first.' },
+      { status: 400 }
+    )
   }
 
   const { data: eventData } = await supabaseAdmin
@@ -43,7 +56,7 @@ export async function POST(req: NextRequest) {
     .maybeSingle<{ id: string }>()
 
   if (!eventData) {
-    return NextResponse.json({ error: 'Etkinlik bulunamadı.' }, { status: 404 })
+    return NextResponse.json({ error: 'Event not found.' }, { status: 404 })
   }
 
   const { data: partnerProfile } = await supabaseAdmin
@@ -53,11 +66,11 @@ export async function POST(req: NextRequest) {
     .maybeSingle<ProfileRow>()
 
   if (!partnerProfile) {
-    return NextResponse.json({ error: 'Oyuncu kodu bulunamadı.' }, { status: 404 })
+    return NextResponse.json({ error: 'Player code not found.' }, { status: 404 })
   }
 
   if (partnerProfile.id === user.id) {
-    return NextResponse.json({ error: 'Kendinizi partner olarak ekleyemezsiniz.' }, { status: 400 })
+    return NextResponse.json({ error: 'You cannot add yourself as your partner.' }, { status: 400 })
   }
 
   const { data: existingForCaptain } = await supabaseAdmin
@@ -69,7 +82,7 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   if (existingForCaptain) {
-    return NextResponse.json({ error: 'Bu etkinliğe zaten kayıtlısınız.' }, { status: 409 })
+    return NextResponse.json({ error: 'You are already registered for this event.' }, { status: 409 })
   }
 
   const { data: existingForPartner } = await supabaseAdmin
@@ -81,7 +94,7 @@ export async function POST(req: NextRequest) {
     .maybeSingle()
 
   if (existingForPartner) {
-    return NextResponse.json({ error: 'Bu oyuncu zaten başka bir takımda.' }, { status: 409 })
+    return NextResponse.json({ error: 'This player is already in another team.' }, { status: 409 })
   }
 
   const { data: inserted, error: insertErr } = await supabaseAdmin
@@ -100,7 +113,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (insertErr || !inserted) {
-    return NextResponse.json({ error: 'Kayıt oluşturulamadı. Lütfen tekrar deneyin.' }, { status: 500 })
+    return NextResponse.json({ error: 'Registration failed. Please try again.' }, { status: 500 })
   }
 
   const partnerName = [partnerProfile.first_name, partnerProfile.last_name]

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
 
 type ProfileRow = {
@@ -34,10 +35,15 @@ type ReceivedInvite = {
   captain_id: string | null
 }
 
+type Props = {
+  userId: string
+  userPhone: string | null
+}
+
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return ''
   try {
-    return new Date(dateStr + 'T00:00:00').toLocaleDateString('tr-TR', {
+    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
       day: 'numeric', month: 'long', year: 'numeric',
     })
   } catch {
@@ -45,7 +51,7 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
-function fullName(p: ProfileRow | null | undefined, fallback = 'Oyuncu'): string {
+function fullName(p: ProfileRow | null | undefined, fallback = 'Player'): string {
   if (!p) return fallback
   return [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || fallback
 }
@@ -74,7 +80,7 @@ function Avatar({ profile, name }: { profile: ProfileRow | null | undefined; nam
   )
 }
 
-export default function TeamInvitesSection({ userId }: { userId: string }) {
+export default function TeamInvitesSection({ userId, userPhone }: Props) {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [sent, setSent] = useState<SentInvite[]>([])
@@ -82,6 +88,9 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
   const [events, setEvents] = useState<EventRow[]>([])
   const [profiles, setProfiles] = useState<ProfileRow[]>([])
   const [actionId, setActionId] = useState<string | null>(null)
+  const [phoneWarningId, setPhoneWarningId] = useState<string | null>(null)
+
+  const hasPhone = !!userPhone && userPhone.trim() !== ''
 
   useEffect(() => {
     let cancelled = false
@@ -154,7 +163,7 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
   const getProfile = (id: string | null) => (id ? profiles.find(p => p.id === id) : undefined)
 
   const handleCancel = async (id: string) => {
-    if (!confirm('Bu takım davetini geri çekmek istediğinize emin misiniz?')) return
+    if (!confirm('Are you sure you want to cancel this team request?')) return
     setActionId(id)
     const res = await fetch('/api/team-registration/cancel', {
       method: 'DELETE',
@@ -164,13 +173,18 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
     const data = await res.json().catch(() => ({} as { error?: string }))
     setActionId(null)
     if (!res.ok) {
-      alert(data.error || 'İşlem başarısız.')
+      alert(data.error || 'Action failed.')
       return
     }
     setSent(prev => prev.filter(s => s.id !== id))
   }
 
   const handleRespond = async (id: string, action: 'accept' | 'reject') => {
+    if (action === 'accept' && !hasPhone) {
+      setPhoneWarningId(id)
+      return
+    }
+    setPhoneWarningId(null)
     setActionId(id)
     const res = await fetch('/api/team-registration/respond', {
       method: 'POST',
@@ -180,7 +194,7 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
     const data = await res.json().catch(() => ({} as { error?: string }))
     setActionId(null)
     if (!res.ok) {
-      alert(data.error || 'İşlem başarısız.')
+      alert(data.error || 'Action failed.')
       return
     }
     setReceived(prev => prev.filter(r => r.id !== id))
@@ -190,19 +204,20 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
 
   return (
     <section className="mt-10">
-      <h2 className="text-white font-bold text-lg mb-3">🎾 Takım Davetlerim</h2>
+      <h2 className="text-white font-bold text-lg mb-3">🎾 My Team Invites</h2>
 
       {loading ? (
-        <p className="text-gray-400 text-sm text-center py-4">Yükleniyor...</p>
+        <p className="text-gray-400 text-sm text-center py-4">Loading...</p>
       ) : totalCount === 0 ? (
-        <p className="text-gray-400 text-sm text-center py-4">Bekleyen davet yok</p>
+        <p className="text-gray-400 text-sm text-center py-4">No pending invites</p>
       ) : (
         <>
           {received.map(inv => {
             const captain = getProfile(inv.captain_id)
             const event = getEvent(inv.event_id)
-            const captainName = fullName(captain, 'Bir oyuncu')
+            const captainName = fullName(captain, 'A player')
             const isActing = actionId === inv.id
+            const showPhoneWarning = phoneWarningId === inv.id
             return (
               <div
                 key={inv.id}
@@ -213,9 +228,8 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white">
                       <span className="font-bold">{captainName}</span>
-                      <span className="text-white/70"> seni </span>
+                      <span className="text-white/70"> invited you to </span>
                       <span className="font-bold text-[#ff6b35]">{inv.team_name}</span>
-                      <span className="text-white/70"> takımına davet etti</span>
                     </p>
                     <p className="text-gray-400 text-xs mt-1 truncate">
                       {event?.name ?? '—'}
@@ -229,16 +243,24 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
                     disabled={isActing}
                     className="flex-1 bg-green-500 hover:bg-green-600 transition text-white text-xs font-bold px-3 py-2 rounded-lg disabled:opacity-50"
                   >
-                    {isActing ? '...' : '✅ Kabul Et'}
+                    {isActing ? '...' : '✅ Accept'}
                   </button>
                   <button
                     onClick={() => handleRespond(inv.id, 'reject')}
                     disabled={isActing}
                     className="flex-1 border border-red-500 text-red-400 hover:bg-red-500/10 transition text-xs font-bold px-3 py-2 rounded-lg disabled:opacity-50"
                   >
-                    {isActing ? '...' : '❌ Reddet'}
+                    {isActing ? '...' : '❌ Decline'}
                   </button>
                 </div>
+                {showPhoneWarning && (
+                  <div className="mt-3 bg-yellow-900/30 border border-yellow-500/30 rounded-xl p-4 text-yellow-300 text-sm">
+                    <p>📱 You need to add a phone number to your profile before accepting.</p>
+                    <Link href="/profile" className="text-[#ff6b35] underline text-sm mt-2 inline-block">
+                      Update Profile →
+                    </Link>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -248,7 +270,7 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
             const event = getEvent(inv.event_id)
             const partnerName = fullName(partner, 'Partner')
             const isActing = actionId === inv.id
-            const badge = { text: '⏳ Partner onayı bekleniyor', bg: 'bg-yellow-500/15', color: 'text-yellow-400' }
+            const badge = { text: '⏳ Waiting for partner approval', bg: 'bg-yellow-500/15', color: 'text-yellow-400' }
             return (
               <div
                 key={inv.id}
@@ -278,7 +300,7 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
                     disabled={isActing}
                     className="border border-red-500 text-red-400 hover:bg-red-500/10 transition text-sm font-semibold px-3 py-1 rounded-lg disabled:opacity-50"
                   >
-                    {isActing ? '...' : '🗑 Geri Çek'}
+                    {isActing ? '...' : '🗑 Cancel Request'}
                   </button>
                 </div>
               </div>
