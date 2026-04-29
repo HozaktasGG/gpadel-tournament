@@ -91,6 +91,7 @@ type EventRow = {
   format: string | null
   description: string | null
   status: string
+  pdf_url: string | null
 }
 
 type EventFormData = {
@@ -143,6 +144,9 @@ export default function AdminPage() {
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([])
   const [pendingInvitesLoading, setPendingInvitesLoading] = useState(false)
   const [cancelingInviteId, setCancelingInviteId] = useState<string | null>(null)
+
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [uploadingPdf, setUploadingPdf] = useState(false)
 
   const supabaseBrowser = createClient()
 
@@ -272,6 +276,27 @@ export default function AdminPage() {
       return
     }
     setCreating(true)
+
+    let pdfUrl: string | null = null
+    if (pdfFile) {
+      setUploadingPdf(true)
+      const safeName = pdfFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const path = `${Date.now()}-${safeName}`
+      const { error: uploadErr } = await supabaseBrowser.storage
+        .from('tournament-docs')
+        .upload(path, pdfFile, { contentType: 'application/pdf' })
+      setUploadingPdf(false)
+      if (uploadErr) {
+        setCreating(false)
+        setCreateMsg({ type: 'error', text: 'PDF upload failed: ' + uploadErr.message })
+        return
+      }
+      const { data: urlData } = supabaseBrowser.storage
+        .from('tournament-docs')
+        .getPublicUrl(path)
+      pdfUrl = urlData.publicUrl
+    }
+
     const res = await fetch('/api/admin/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -288,6 +313,7 @@ export default function AdminPage() {
           format: eventForm.format || null,
           description: eventForm.description || null,
           status: eventForm.status,
+          pdf_url: pdfUrl,
         },
       }),
     })
@@ -299,6 +325,7 @@ export default function AdminPage() {
     }
     setCreateMsg({ type: 'success', text: `Tournament created (id: ${data.data.id})` })
     setEventForm(EMPTY_EVENT_FORM)
+    setPdfFile(null)
     await fetchEvents()
   }
 
@@ -562,6 +589,24 @@ export default function AdminPage() {
               />
             </label>
 
+            <label className="block">
+              <span className="block text-xs font-semibold text-white/60 uppercase tracking-wide mb-1.5">Tournament Info PDF (optional)</span>
+              <input
+                type="file"
+                accept=".pdf,application/pdf"
+                onChange={e => setPdfFile(e.target.files?.[0] ?? null)}
+                className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-[#ff6b35] file:text-white file:text-xs file:font-semibold file:cursor-pointer"
+                style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+              />
+              {pdfFile && (
+                <p className="text-gray-400 text-xs mt-1.5">
+                  {pdfFile.name}
+                  {' · '}
+                  {(pdfFile.size / 1024).toFixed(0)} KB
+                </p>
+              )}
+            </label>
+
             {createMsg && (
               <div
                 className="px-4 py-2.5 rounded-lg text-sm font-semibold"
@@ -581,7 +626,7 @@ export default function AdminPage() {
               className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold text-white disabled:opacity-50"
               style={{ backgroundColor: '#ff6b35' }}
             >
-              {creating ? 'Creating...' : 'Create Tournament'}
+              {creating ? (uploadingPdf ? 'Uploading PDF...' : 'Creating...') : 'Create Tournament'}
             </button>
           </form>
         </section>

@@ -15,6 +15,7 @@ type EventInput = {
   format: string | null
   description: string | null
   status: string
+  pdf_url: string | null
 }
 
 function sanitizeEvent(raw: any): Partial<EventInput> {
@@ -28,6 +29,7 @@ function sanitizeEvent(raw: any): Partial<EventInput> {
   if (raw?.format === null || typeof raw?.format === 'string') out.format = raw.format
   if (raw?.description === null || typeof raw?.description === 'string') out.description = raw.description
   if (typeof raw?.status === 'string') out.status = raw.status
+  if (raw?.pdf_url === null || typeof raw?.pdf_url === 'string') out.pdf_url = raw.pdf_url
   return out
 }
 

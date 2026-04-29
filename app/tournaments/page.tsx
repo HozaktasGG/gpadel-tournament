@@ -11,6 +11,7 @@ type EventRow = {
   format: string | null
   status: string
   entry_fee: number | null
+  pdf_url: string | null
 }
 
 function todayString() {

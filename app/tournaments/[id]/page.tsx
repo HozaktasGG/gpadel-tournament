@@ -15,6 +15,7 @@ type EventRow = {
   status: string
   entry_fee: number | null
   description: string | null
+  pdf_url: string | null
 }
 
 type Profile = {
@@ -424,9 +425,21 @@ export default async function TournamentDetailPage({
             )}
           </div>
 
-          {ev.description && (
+          {(ev.description || ev.pdf_url) && (
             <div className="px-6 sm:px-8 py-5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              <p className="text-sm text-white/75 leading-relaxed">{ev.description}</p>
+              {ev.description && (
+                <p className="text-sm text-white/75 leading-relaxed">{ev.description}</p>
+              )}
+              {ev.pdf_url && (
+                <a
+                  href={ev.pdf_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-flex items-center gap-2 bg-[#0f2318] border border-[#2d5a40] hover:border-[#ff6b35] text-white px-4 py-2.5 rounded-xl text-sm font-medium transition ${ev.description ? 'mt-4' : ''}`}
+                >
+                  📄 Tournament Info PDF
+                </a>
+              )}
             </div>
           )}
 
