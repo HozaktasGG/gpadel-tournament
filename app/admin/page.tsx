@@ -59,6 +59,22 @@ type TeamRegRaw = Omit<TeamReg, 'captain' | 'partner' | 'event'> & {
   event: TeamEventEmbed | TeamEventEmbed[] | null
 }
 
+type PendingInvite = {
+  id: string
+  team_name: string
+  status: 'pending_partner' | 'pending_approval'
+  created_at: string
+  event_name: string | null
+}
+
+type PendingInviteRaw = {
+  id: string
+  team_name: string
+  status: 'pending_partner' | 'pending_approval'
+  created_at: string
+  event: TeamEventEmbed | TeamEventEmbed[] | null
+}
+
 function unwrapOne<T>(v: T | T[] | null): T | null {
   if (Array.isArray(v)) return v[0] ?? null
   return v
@@ -123,6 +139,11 @@ export default function AdminPage() {
   const [teamRegs, setTeamRegs] = useState<TeamReg[]>([])
   const [teamRegsLoading, setTeamRegsLoading] = useState(true)
   const [teamActionLoading, setTeamActionLoading] = useState<string | null>(null)
+
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([])
+  const [pendingInvitesLoading, setPendingInvitesLoading] = useState(false)
+  const [cancelingInviteId, setCancelingInviteId] = useState<string | null>(null)
+
   const supabaseBrowser = createClient()
 
   const fetchUsers = async () => {
@@ -192,6 +213,56 @@ export default function AdminPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [password])
+
+  useEffect(() => {
+    if (!selectedUser) {
+      setPendingInvites([])
+      return
+    }
+    let cancelled = false
+    const load = async () => {
+      setPendingInvitesLoading(true)
+      const { data } = await supabaseBrowser
+        .from('team_registrations')
+        .select('id, team_name, status, created_at, event:events(name)')
+        .eq('captain_id', selectedUser.id)
+        .in('status', ['pending_partner', 'pending_approval'])
+        .order('created_at', { ascending: false })
+
+      if (cancelled) return
+
+      const rows = ((data ?? []) as unknown as PendingInviteRaw[]).map<PendingInvite>(r => ({
+        id: r.id,
+        team_name: r.team_name,
+        status: r.status,
+        created_at: r.created_at,
+        event_name: unwrapOne(r.event)?.name ?? null,
+      }))
+      setPendingInvites(rows)
+      setPendingInvitesLoading(false)
+    }
+    load()
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUser?.id])
+
+  const handleCancelInvite = async (registrationId: string) => {
+    if (!confirm('Bu takım davetini geri çekmek istediğinize emin misiniz?')) return
+    setCancelingInviteId(registrationId)
+    const res = await fetch('/api/team-registration/cancel', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registration_id: registrationId }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setCancelingInviteId(null)
+    if (!res.ok) {
+      alert(data.error || 'İşlem başarısız.')
+      return
+    }
+    setPendingInvites(prev => prev.filter(p => p.id !== registrationId))
+    fetchTeamRegs()
+  }
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -1034,7 +1105,7 @@ export default function AdminPage() {
           onClick={() => setSelectedUser(null)}
         >
           <div
-            className="w-full max-w-md rounded-2xl p-6"
+            className="w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
             style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.12)' }}
             onClick={e => e.stopPropagation()}
           >
@@ -1060,6 +1131,52 @@ export default function AdminPage() {
                 </div>
               ))}
             </dl>
+
+            {(pendingInvitesLoading || pendingInvites.length > 0) && (
+              <div className="mt-6 pt-5" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <h4 className="text-sm font-bold text-white mb-3">Bekleyen Takım Davetleri</h4>
+                {pendingInvitesLoading ? (
+                  <p className="text-xs text-white/50">Yükleniyor...</p>
+                ) : (
+                  <div className="space-y-2">
+                    {pendingInvites.map(inv => {
+                      const badge = inv.status === 'pending_partner'
+                        ? { text: 'Partner Bekleniyor', bg: 'rgba(234,179,8,0.15)', color: '#eab308' }
+                        : { text: 'Admin Onayı Bekleniyor', bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' }
+                      const isCanceling = cancelingInviteId === inv.id
+                      return (
+                        <div
+                          key={inv.id}
+                          className="rounded-lg p-3"
+                          style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.08)' }}
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-white truncate" style={{ color: '#ff6b35' }}>{inv.team_name}</p>
+                              <p className="text-xs text-white/60 truncate">{inv.event_name ?? '—'}</p>
+                            </div>
+                            <span
+                              className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap"
+                              style={{ backgroundColor: badge.bg, color: badge.color }}
+                            >
+                              {badge.text}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleCancelInvite(inv.id)}
+                            disabled={isCanceling}
+                            className="px-2.5 py-1 rounded-md text-[11px] font-semibold disabled:opacity-50"
+                            style={{ backgroundColor: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
+                          >
+                            {isCanceling ? '...' : '🗑 İsteği Geri Çek'}
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
