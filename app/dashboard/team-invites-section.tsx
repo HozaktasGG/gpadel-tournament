@@ -19,7 +19,7 @@ type EventRow = {
 type SentInvite = {
   id: string
   team_name: string
-  status: 'pending_partner' | 'pending_approval'
+  status: 'pending_partner'
   created_at: string
   event_id: string | null
   partner_id: string | null
@@ -93,7 +93,7 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
           .from('team_registrations')
           .select('id, team_name, status, created_at, event_id, partner_id')
           .eq('captain_id', userId)
-          .in('status', ['pending_partner', 'pending_approval'])
+          .eq('status', 'pending_partner')
           .order('created_at', { ascending: false }),
         supabase
           .from('team_registrations')
@@ -248,9 +248,7 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
             const event = getEvent(inv.event_id)
             const partnerName = fullName(partner, 'Partner')
             const isActing = actionId === inv.id
-            const badge = inv.status === 'pending_partner'
-              ? { text: '⏳ Partner onayı bekleniyor', bg: 'bg-yellow-500/15', color: 'text-yellow-400' }
-              : { text: '🔵 Admin onayı bekleniyor',   bg: 'bg-blue-500/15',   color: 'text-blue-400' }
+            const badge = { text: '⏳ Partner onayı bekleniyor', bg: 'bg-yellow-500/15', color: 'text-yellow-400' }
             return (
               <div
                 key={inv.id}

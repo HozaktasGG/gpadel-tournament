@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   const { error: updateErr } = await supabaseAdmin
     .from('team_registrations')
     .update({
-      status: accepted ? 'pending_approval' : 'rejected',
+      status: accepted ? 'approved' : 'rejected',
       partner_confirmed: accepted,
     })
     .eq('id', registration.id)
@@ -63,6 +63,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    status: accepted ? 'pending_approval' : 'rejected',
+    status: accepted ? 'approved' : 'rejected',
   })
 }

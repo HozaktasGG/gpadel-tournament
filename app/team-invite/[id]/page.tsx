@@ -175,8 +175,7 @@ export default function TeamInvitePage() {
           <div className="text-6xl mb-4">🎉</div>
           <h1 className="text-2xl font-bold text-white mb-2">Daveti Kabul Ettiniz!</h1>
           <p className="text-sm text-white/80 mb-6">
-            <strong className="text-[#ff6b35]">"{registration?.team_name}"</strong> takımına katıldın.
-            Admin onayı bekleniyor — onaylandığında bilgilendirileceksin.
+            <strong className="text-[#ff6b35]">"{registration?.team_name}"</strong> takımına katıldın. Turnuvada görüşürüz! 🎾
           </p>
           <Link href="/dashboard" className="inline-block px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35]">
             Dashboard'a Git
