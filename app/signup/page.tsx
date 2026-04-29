@@ -1,39 +1,49 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase-client'
 
 export default function SignUpPage() {
   const supabase = createClient()
+  const router = useRouter()
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!cancelled && user) {
+        router.replace('/dashboard')
+      }
+    })
+    return () => { cancelled = true }
+  }, [router, supabase])
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    const origin = window.location.origin
     const { error: err } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: { first_name: firstName, last_name: lastName },
-        emailRedirectTo: `${origin}/auth/callback?next=/dashboard`,
       },
     })
-    setLoading(false)
     if (err) {
+      setLoading(false)
       setError(err.message)
       return
     }
-    setSuccess(true)
+    router.push('/dashboard')
+    router.refresh()
   }
 
   const handleGoogle = async () => {
@@ -47,40 +57,6 @@ export default function SignUpPage() {
       setError(err.message)
       setLoading(false)
     }
-  }
-
-  if (success) {
-    return (
-      <main
-        className="flex-1 flex items-center justify-center py-12 px-4"
-        style={{ backgroundColor: '#1a3d2e' }}
-      >
-        <div
-          className="w-full max-w-md rounded-2xl p-8 text-center"
-          style={{
-            backgroundColor: '#0f2a1f',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}
-        >
-          <div className="text-4xl mb-4">📬</div>
-          <h1 className="text-xl font-bold text-white mb-2">
-            Check your email
-          </h1>
-          <p className="text-sm text-white/70 leading-relaxed">
-            We sent a verification link to{' '}
-            <span className="text-white font-semibold">{email}</span>. Click it
-            to activate your account.
-          </p>
-          <Link
-            href="/signin"
-            className="inline-block mt-6 text-sm font-semibold"
-            style={{ color: '#ff6b35' }}
-          >
-            Back to sign in
-          </Link>
-        </div>
-      </main>
-    )
   }
 
   return (
