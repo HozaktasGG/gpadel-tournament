@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     { data: eventRegs },
   ] = await Promise.all([
     supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
-    supabaseAdmin.from('profiles').select('id, first_name, last_name, phone, skill_score, quiz_completed_at'),
+    supabaseAdmin.from('profiles').select('id, first_name, last_name, phone, skill_score, quiz_completed_at, player_code'),
     supabaseAdmin.from('event_registrations').select('user_id'),
   ])
 
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       phone: p?.phone ?? '',
       skill_score: p?.skill_score ?? null,
       quiz_completed_at: p?.quiz_completed_at ?? null,
+      player_code: p?.player_code ?? null,
       event_count: regCountByUser[u.id] ?? 0,
       created_at: u.created_at,
     }

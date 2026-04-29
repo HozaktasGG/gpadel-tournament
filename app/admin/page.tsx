@@ -13,6 +13,7 @@ type UserRow = {
   phone: string
   skill_score: number | null
   quiz_completed_at: string | null
+  player_code: string | null
   event_count: number
   created_at: string
 }
@@ -1044,6 +1045,7 @@ export default function AdminPage() {
             <dl className="space-y-3">
               {[
                 ['Name', `${selectedUser.first_name} ${selectedUser.last_name}`.trim() || '—'],
+                ['Player Code', selectedUser.player_code ?? '—'],
                 ['Email', selectedUser.email || '—'],
                 ['Phone', selectedUser.phone || '—'],
                 ['Skill Score', selectedUser.skill_score != null ? `${selectedUser.skill_score} pts` : '—'],
