@@ -3,13 +3,15 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
 
-type ProfileEmbed = {
+type ProfileRow = {
+  id: string
   first_name: string | null
   last_name: string | null
   avatar_url: string | null
 }
 
-type EventEmbed = {
+type EventRow = {
+  id: string
   name: string | null
   date: string | null
 }
@@ -19,8 +21,8 @@ type SentInvite = {
   team_name: string
   status: 'pending_partner' | 'pending_approval'
   created_at: string
-  event: EventEmbed | null
-  partner: ProfileEmbed | null
+  event_id: string | null
+  partner_id: string | null
 }
 
 type ReceivedInvite = {
@@ -28,23 +30,8 @@ type ReceivedInvite = {
   team_name: string
   status: 'pending_partner'
   created_at: string
-  event: EventEmbed | null
-  captain: ProfileEmbed | null
-}
-
-type SentInviteRaw = Omit<SentInvite, 'event' | 'partner'> & {
-  event: EventEmbed | EventEmbed[] | null
-  partner: ProfileEmbed | ProfileEmbed[] | null
-}
-
-type ReceivedInviteRaw = Omit<ReceivedInvite, 'event' | 'captain'> & {
-  event: EventEmbed | EventEmbed[] | null
-  captain: ProfileEmbed | ProfileEmbed[] | null
-}
-
-function unwrapOne<T>(v: T | T[] | null): T | null {
-  if (Array.isArray(v)) return v[0] ?? null
-  return v
+  event_id: string | null
+  captain_id: string | null
 }
 
 function formatDate(dateStr: string | null): string {
@@ -58,12 +45,12 @@ function formatDate(dateStr: string | null): string {
   }
 }
 
-function fullName(p: ProfileEmbed | null, fallback = 'Oyuncu'): string {
+function fullName(p: ProfileRow | null | undefined, fallback = 'Oyuncu'): string {
   if (!p) return fallback
   return [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || fallback
 }
 
-function Avatar({ profile, name }: { profile: ProfileEmbed | null; name: string }) {
+function Avatar({ profile, name }: { profile: ProfileRow | null | undefined; name: string }) {
   if (profile?.avatar_url) {
     return (
       <img
@@ -92,26 +79,25 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
   const [loading, setLoading] = useState(true)
   const [sent, setSent] = useState<SentInvite[]>([])
   const [received, setReceived] = useState<ReceivedInvite[]>([])
+  const [events, setEvents] = useState<EventRow[]>([])
+  const [profiles, setProfiles] = useState<ProfileRow[]>([])
   const [actionId, setActionId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
     const load = async () => {
       setLoading(true)
-      const [{ data: sentData }, { data: receivedData }] = await Promise.all([
+
+      const [{ data: sentInvites }, { data: receivedInvites }] = await Promise.all([
         supabase
           .from('team_registrations')
-          .select(
-            'id, team_name, status, created_at, event:events(name, date), partner:profiles(first_name, last_name, avatar_url)'
-          )
+          .select('id, team_name, status, created_at, event_id, partner_id')
           .eq('captain_id', userId)
           .in('status', ['pending_partner', 'pending_approval'])
           .order('created_at', { ascending: false }),
         supabase
           .from('team_registrations')
-          .select(
-            'id, team_name, status, created_at, event:events(name, date), captain:profiles(first_name, last_name, avatar_url)'
-          )
+          .select('id, team_name, status, created_at, event_id, captain_id')
           .eq('partner_id', userId)
           .eq('status', 'pending_partner')
           .order('created_at', { ascending: false }),
@@ -119,30 +105,53 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
 
       if (cancelled) return
 
-      const sentRows = ((sentData ?? []) as unknown as SentInviteRaw[]).map<SentInvite>(r => ({
-        id: r.id,
-        team_name: r.team_name,
-        status: r.status,
-        created_at: r.created_at,
-        event: unwrapOne(r.event),
-        partner: unwrapOne(r.partner),
-      }))
-      const receivedRows = ((receivedData ?? []) as unknown as ReceivedInviteRaw[]).map<ReceivedInvite>(r => ({
-        id: r.id,
-        team_name: r.team_name,
-        status: r.status,
-        created_at: r.created_at,
-        event: unwrapOne(r.event),
-        captain: unwrapOne(r.captain),
-      }))
+      const sentRows = (sentInvites ?? []) as SentInvite[]
+      const receivedRows = (receivedInvites ?? []) as ReceivedInvite[]
+
+      const eventIds = Array.from(
+        new Set(
+          [...sentRows, ...receivedRows]
+            .map(r => r.event_id)
+            .filter((id): id is string => !!id)
+        )
+      )
+
+      const profileIds = Array.from(
+        new Set(
+          [
+            ...sentRows.map(r => r.partner_id),
+            ...receivedRows.map(r => r.captain_id),
+          ].filter((id): id is string => !!id)
+        )
+      )
+
+      const [{ data: eventsData }, { data: profilesData }] = await Promise.all([
+        eventIds.length
+          ? supabase.from('events').select('id, name, date').in('id', eventIds)
+          : Promise.resolve({ data: [] as EventRow[] }),
+        profileIds.length
+          ? supabase
+              .from('profiles')
+              .select('id, first_name, last_name, avatar_url')
+              .in('id', profileIds)
+          : Promise.resolve({ data: [] as ProfileRow[] }),
+      ])
+
+      if (cancelled) return
 
       setSent(sentRows)
       setReceived(receivedRows)
+      setEvents((eventsData ?? []) as EventRow[])
+      setProfiles((profilesData ?? []) as ProfileRow[])
       setLoading(false)
     }
+
     load()
     return () => { cancelled = true }
   }, [userId, supabase])
+
+  const getEvent = (id: string | null) => (id ? events.find(e => e.id === id) : undefined)
+  const getProfile = (id: string | null) => (id ? profiles.find(p => p.id === id) : undefined)
 
   const handleCancel = async (id: string) => {
     if (!confirm('Bu takım davetini geri çekmek istediğinize emin misiniz?')) return
@@ -190,7 +199,9 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
       ) : (
         <>
           {received.map(inv => {
-            const captainName = fullName(inv.captain, 'Bir oyuncu')
+            const captain = getProfile(inv.captain_id)
+            const event = getEvent(inv.event_id)
+            const captainName = fullName(captain, 'Bir oyuncu')
             const isActing = actionId === inv.id
             return (
               <div
@@ -198,7 +209,7 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
                 className="bg-[#0f2318] border border-[#2d5a40] rounded-xl p-4 mb-3"
               >
                 <div className="flex items-start gap-3">
-                  <Avatar profile={inv.captain} name={captainName} />
+                  <Avatar profile={captain} name={captainName} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white">
                       <span className="font-bold">{captainName}</span>
@@ -207,8 +218,8 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
                       <span className="text-white/70"> takımına davet etti</span>
                     </p>
                     <p className="text-gray-400 text-xs mt-1 truncate">
-                      {inv.event?.name ?? '—'}
-                      {inv.event?.date && ` · ${formatDate(inv.event.date)}`}
+                      {event?.name ?? '—'}
+                      {event?.date && ` · ${formatDate(event.date)}`}
                     </p>
                   </div>
                 </div>
@@ -233,7 +244,9 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
           })}
 
           {sent.map(inv => {
-            const partnerName = fullName(inv.partner, 'Partner')
+            const partner = getProfile(inv.partner_id)
+            const event = getEvent(inv.event_id)
+            const partnerName = fullName(partner, 'Partner')
             const isActing = actionId === inv.id
             const badge = inv.status === 'pending_partner'
               ? { text: '⏳ Partner onayı bekleniyor', bg: 'bg-yellow-500/15', color: 'text-yellow-400' }
@@ -244,7 +257,7 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
                 className="bg-[#0f2318] border border-[#2d5a40] rounded-xl p-4 mb-3"
               >
                 <div className="flex items-start gap-3">
-                  <Avatar profile={inv.partner} name={partnerName} />
+                  <Avatar profile={partner} name={partnerName} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-[#ff6b35] truncate">
                       {inv.team_name}
@@ -253,8 +266,8 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
                       <span className="text-white/60">Partner:</span> {partnerName}
                     </p>
                     <p className="text-gray-400 text-xs mt-0.5 truncate">
-                      {inv.event?.name ?? '—'}
-                      {inv.event?.date && ` · ${formatDate(inv.event.date)}`}
+                      {event?.name ?? '—'}
+                      {event?.date && ` · ${formatDate(event.date)}`}
                     </p>
                   </div>
                 </div>
