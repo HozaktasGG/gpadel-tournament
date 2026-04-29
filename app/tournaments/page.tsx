@@ -12,6 +12,7 @@ type EventRow = {
   status: string
   entry_fee: number | null
   pdf_url: string | null
+  image_url: string | null
 }
 
 function todayString() {
@@ -135,13 +136,21 @@ export default async function TournamentsPage({
                 <Link
                   key={ev.id}
                   href={`/tournaments/${ev.id}`}
-                  className="block rounded-2xl p-6 transition hover:-translate-y-1"
+                  className="block rounded-2xl overflow-hidden transition hover:-translate-y-1"
                   style={{
                     backgroundColor: '#0f2a1f',
                     border: '1px solid rgba(255,255,255,0.08)',
                     boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
                   }}
                 >
+                  {ev.image_url && (
+                    <img
+                      src={ev.image_url}
+                      alt={ev.name}
+                      className="w-full h-36 object-cover"
+                    />
+                  )}
+                  <div className="p-6">
                   <div className="flex items-start justify-between mb-3">
                     <span
                       className="text-[10px] font-bold tracking-wider uppercase px-2 py-1 rounded-full"
@@ -192,6 +201,7 @@ export default async function TournamentsPage({
                         Details →
                       </span>
                     </div>
+                  </div>
                   </div>
                 </Link>
               )

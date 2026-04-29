@@ -16,6 +16,7 @@ type EventRow = {
   entry_fee: number | null
   description: string | null
   pdf_url: string | null
+  image_url: string | null
 }
 
 type Profile = {
@@ -369,6 +370,13 @@ export default async function TournamentDetailPage({
         </Link>
 
         <div className="rounded-3xl overflow-hidden" style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}>
+          {ev.image_url && (
+            <img
+              src={ev.image_url}
+              alt={ev.name}
+              className="w-full h-48 sm:h-64 object-cover"
+            />
+          )}
           {/* Header */}
           <div className="px-6 sm:px-8 py-8" style={{ background: 'linear-gradient(180deg,#204a38 0%,#0f2a1f 100%)' }}>
             <div className="flex items-center gap-2 mb-3">

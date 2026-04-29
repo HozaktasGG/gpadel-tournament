@@ -92,6 +92,7 @@ type EventRow = {
   description: string | null
   status: string
   pdf_url: string | null
+  image_url: string | null
 }
 
 type EventFormData = {
@@ -147,6 +148,8 @@ export default function AdminPage() {
 
   const [pdfFile, setPdfFile] = useState<File | null>(null)
   const [uploadingPdf, setUploadingPdf] = useState(false)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   const supabaseBrowser = createClient()
 
@@ -297,6 +300,26 @@ export default function AdminPage() {
       pdfUrl = urlData.publicUrl
     }
 
+    let imageUrl: string | null = null
+    if (imageFile) {
+      setUploadingImage(true)
+      const safeName = imageFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const path = `${Date.now()}-${safeName}`
+      const { error: uploadErr } = await supabaseBrowser.storage
+        .from('tournament-images')
+        .upload(path, imageFile, { contentType: imageFile.type || 'image/jpeg' })
+      setUploadingImage(false)
+      if (uploadErr) {
+        setCreating(false)
+        setCreateMsg({ type: 'error', text: 'Image upload failed: ' + uploadErr.message })
+        return
+      }
+      const { data: urlData } = supabaseBrowser.storage
+        .from('tournament-images')
+        .getPublicUrl(path)
+      imageUrl = urlData.publicUrl
+    }
+
     const res = await fetch('/api/admin/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -314,6 +337,7 @@ export default function AdminPage() {
           description: eventForm.description || null,
           status: eventForm.status,
           pdf_url: pdfUrl,
+          image_url: imageUrl,
         },
       }),
     })
@@ -326,6 +350,7 @@ export default function AdminPage() {
     setCreateMsg({ type: 'success', text: `Tournament created (id: ${data.data.id})` })
     setEventForm(EMPTY_EVENT_FORM)
     setPdfFile(null)
+    setImageFile(null)
     await fetchEvents()
   }
 
@@ -607,6 +632,32 @@ export default function AdminPage() {
               )}
             </label>
 
+            <label className="block">
+              <span className="block text-xs font-semibold text-white/60 uppercase tracking-wide mb-1.5">Tournament Image (optional)</span>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={e => setImageFile(e.target.files?.[0] ?? null)}
+                className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-[#ff6b35] file:text-white file:text-xs file:font-semibold file:cursor-pointer"
+                style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+              />
+              {imageFile && (
+                <div className="mt-2 flex items-center gap-3">
+                  <img
+                    src={URL.createObjectURL(imageFile)}
+                    alt={imageFile.name}
+                    className="w-16 h-16 object-cover rounded-lg"
+                    style={{ border: '1px solid rgba(255,255,255,0.1)' }}
+                  />
+                  <p className="text-gray-400 text-xs">
+                    {imageFile.name}
+                    {' · '}
+                    {(imageFile.size / 1024).toFixed(0)} KB
+                  </p>
+                </div>
+              )}
+            </label>
+
             {createMsg && (
               <div
                 className="px-4 py-2.5 rounded-lg text-sm font-semibold"
@@ -626,7 +677,13 @@ export default function AdminPage() {
               className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold text-white disabled:opacity-50"
               style={{ backgroundColor: '#ff6b35' }}
             >
-              {creating ? (uploadingPdf ? 'Uploading PDF...' : 'Creating...') : 'Create Tournament'}
+              {creating
+                ? uploadingImage
+                  ? 'Uploading image...'
+                  : uploadingPdf
+                    ? 'Uploading PDF...'
+                    : 'Creating...'
+                : 'Create Tournament'}
             </button>
           </form>
         </section>
