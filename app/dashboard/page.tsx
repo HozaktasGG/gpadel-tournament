@@ -294,7 +294,7 @@ export default async function DashboardPage() {
           )}
         </section>
 
-        <TeamInvitesSection userId={user.id} userPhone={profile?.phone ?? null} />
+        <TeamInvitesSection userId={user.id} />
 
         {past.length > 0 && (
           <section className="mt-10">

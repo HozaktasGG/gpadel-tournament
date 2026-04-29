@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
 import TeamRegistrationModal from '@/components/TeamRegistrationModal'
 
@@ -17,7 +16,6 @@ type Props = {
   eventId: string
   eventName: string
   userId: string
-  userPhone: string | null
   initialRegistration?: TeamReg | null
 }
 
@@ -25,7 +23,6 @@ export default function TeamRegisterSection({
   eventId,
   eventName,
   userId,
-  userPhone,
   initialRegistration = null,
 }: Props) {
   const supabase = createClient()
@@ -35,9 +32,6 @@ export default function TeamRegisterSection({
   const [modalOpen, setModalOpen] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [canceling, setCanceling] = useState(false)
-  const [showPhoneWarning, setShowPhoneWarning] = useState(false)
-
-  const hasPhone = !!userPhone && userPhone.trim() !== ''
 
   const loadRegistration = async () => {
     const { data } = await supabase
@@ -51,15 +45,6 @@ export default function TeamRegisterSection({
       .maybeSingle<TeamReg>()
     setRegistration(data ?? null)
     setLoading(false)
-  }
-
-  const handleRegisterClick = () => {
-    if (!hasPhone) {
-      setShowPhoneWarning(true)
-      return
-    }
-    setShowPhoneWarning(false)
-    setModalOpen(true)
   }
 
   const handleCancel = async () => {
@@ -102,15 +87,6 @@ export default function TeamRegisterSection({
       aria-live="polite"
     >
       {toast}
-    </div>
-  ) : null
-
-  const phoneWarning = showPhoneWarning ? (
-    <div className="mt-3 bg-yellow-900/30 border border-yellow-500/30 rounded-xl p-4 text-yellow-300 text-sm">
-      <p>📱 You need to add a phone number to your profile before registering.</p>
-      <Link href="/profile" className="text-[#ff6b35] underline text-sm mt-2 inline-block">
-        Update Profile →
-      </Link>
     </div>
   ) : null
 
@@ -196,15 +172,13 @@ export default function TeamRegisterSection({
           {registration.status === 'rejected' && (
             <button
               type="button"
-              onClick={handleRegisterClick}
+              onClick={() => setModalOpen(true)}
               className="mt-3 w-full py-3 rounded-xl text-sm font-bold text-white"
               style={{ backgroundColor: '#ff6b35' }}
             >
               🎾 Register Again
             </button>
           )}
-
-          {phoneWarning}
 
           {modalOpen && (
             <TeamRegistrationModal
@@ -225,13 +199,11 @@ export default function TeamRegisterSection({
       <div className="mt-6">
         <button
           type="button"
-          onClick={handleRegisterClick}
+          onClick={() => setModalOpen(true)}
           className="w-full bg-[#ff6b35] text-white font-bold rounded-xl px-6 py-3 transition hover:brightness-110"
         >
           🎾 Register as a Team
         </button>
-
-        {phoneWarning}
 
         {modalOpen && (
           <TeamRegistrationModal

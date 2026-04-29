@@ -208,22 +208,6 @@ export async function POST(req: NextRequest) {
 
   const accepted = action === 'accept'
 
-  if (accepted) {
-    const { data: partnerProfile } = await supabaseAdmin
-      .from('profiles')
-      .select('phone, first_name, last_name, email')
-      .eq('id', user.id)
-      .single<{ phone: string | null; first_name: string | null; last_name: string | null; email: string | null }>()
-
-    const hasPhone = !!partnerProfile?.phone && partnerProfile.phone.trim().length > 0
-    if (!hasPhone) {
-      return NextResponse.json(
-        { error: 'Please add a phone number to your profile first.' },
-        { status: 400 }
-      )
-    }
-  }
-
   const { data: updated, error: updateErr } = await supabaseAdmin
     .from('team_registrations')
     .update({

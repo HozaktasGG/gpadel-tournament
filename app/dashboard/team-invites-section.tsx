@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase-client'
 
 type ProfileRow = {
@@ -37,7 +36,6 @@ type ReceivedInvite = {
 
 type Props = {
   userId: string
-  userPhone: string | null
 }
 
 function formatDate(dateStr: string | null): string {
@@ -80,7 +78,7 @@ function Avatar({ profile, name }: { profile: ProfileRow | null | undefined; nam
   )
 }
 
-export default function TeamInvitesSection({ userId, userPhone }: Props) {
+export default function TeamInvitesSection({ userId }: Props) {
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [sent, setSent] = useState<SentInvite[]>([])
@@ -88,9 +86,6 @@ export default function TeamInvitesSection({ userId, userPhone }: Props) {
   const [events, setEvents] = useState<EventRow[]>([])
   const [profiles, setProfiles] = useState<ProfileRow[]>([])
   const [actionId, setActionId] = useState<string | null>(null)
-  const [phoneWarningId, setPhoneWarningId] = useState<string | null>(null)
-
-  const hasPhone = !!userPhone && userPhone.trim() !== ''
 
   useEffect(() => {
     let cancelled = false
@@ -180,11 +175,6 @@ export default function TeamInvitesSection({ userId, userPhone }: Props) {
   }
 
   const handleRespond = async (id: string, action: 'accept' | 'reject') => {
-    if (action === 'accept' && !hasPhone) {
-      setPhoneWarningId(id)
-      return
-    }
-    setPhoneWarningId(null)
     setActionId(id)
     const res = await fetch('/api/team-registration/respond', {
       method: 'POST',
@@ -217,7 +207,6 @@ export default function TeamInvitesSection({ userId, userPhone }: Props) {
             const event = getEvent(inv.event_id)
             const captainName = fullName(captain, 'A player')
             const isActing = actionId === inv.id
-            const showPhoneWarning = phoneWarningId === inv.id
             return (
               <div
                 key={inv.id}
@@ -253,14 +242,6 @@ export default function TeamInvitesSection({ userId, userPhone }: Props) {
                     {isActing ? '...' : '❌ Decline'}
                   </button>
                 </div>
-                {showPhoneWarning && (
-                  <div className="mt-3 bg-yellow-900/30 border border-yellow-500/30 rounded-xl p-4 text-yellow-300 text-sm">
-                    <p>📱 You need to add a phone number to your profile before accepting.</p>
-                    <Link href="/profile" className="text-[#ff6b35] underline text-sm mt-2 inline-block">
-                      Update Profile →
-                    </Link>
-                  </div>
-                )}
               </div>
             )
           })}

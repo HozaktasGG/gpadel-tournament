@@ -164,7 +164,6 @@ export default async function TournamentDetailPage({
   let participants: Participant[] | null = null
   let approvedTeams: ApprovedTeam[] = []
   let teamPlayerProfiles: Map<string, Profile> = new Map()
-  let userPhone: string | null = null
   let filled = 0
 
   if (isTeamFormat) {
@@ -245,16 +244,6 @@ export default async function TournamentDetailPage({
         participants = []
       }
     }
-  }
-
-  if (user) {
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('id, first_name, last_name, skill_score, skill_level, phone, player_code, avatar_url')
-      .eq('id', user.id)
-      .single<{ phone: string | null }>()
-    const hasPhone = !!profileData?.phone && profileData.phone.trim().length > 0
-    userPhone = hasPhone ? profileData!.phone!.trim() : null
   }
 
   const sorted = participants
@@ -825,7 +814,6 @@ export default async function TournamentDetailPage({
                 eventId={ev.id}
                 eventName={ev.name}
                 userId={user.id}
-                userPhone={userPhone}
                 initialRegistration={await loadInitialTeamRegistration(supabase, ev.id, user.id)}
               />
             ) : (

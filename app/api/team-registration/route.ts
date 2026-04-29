@@ -36,20 +36,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Authentication required.' }, { status: 401 })
   }
 
-  const { data: captainProfile } = await supabaseAdmin
-    .from('profiles')
-    .select('phone, first_name, last_name, email')
-    .eq('id', user.id)
-    .single<{ phone: string | null; first_name: string | null; last_name: string | null; email: string | null }>()
-
-  const hasPhone = !!captainProfile?.phone && captainProfile.phone.trim().length > 0
-  if (!hasPhone) {
-    return NextResponse.json(
-      { error: 'Please add a phone number to your profile first.' },
-      { status: 400 }
-    )
-  }
-
   const { data: eventData } = await supabaseAdmin
     .from('events')
     .select('id')
