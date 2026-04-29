@@ -105,6 +105,30 @@ function normalizeName(name: string): string {
     .join(' ')
 }
 
+type InitialTeamReg = {
+  id: string
+  status: 'pending_partner' | 'pending_approval' | 'approved' | 'rejected'
+  team_name: string
+  captain_id: string
+}
+
+async function loadInitialTeamRegistration(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  eventId: string,
+  userId: string
+): Promise<InitialTeamReg | null> {
+  const { data: existingReg } = await supabase
+    .from('team_registrations')
+    .select('id, status, team_name, captain_id')
+    .eq('event_id', eventId)
+    .or(`captain_id.eq.${userId},partner_id.eq.${userId}`)
+    .neq('status', 'rejected')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle<InitialTeamReg>()
+  return existingReg ?? null
+}
+
 export default async function TournamentDetailPage({
   params,
 }: {
@@ -656,6 +680,7 @@ export default async function TournamentDetailPage({
                 eventId={ev.id}
                 eventName={ev.name}
                 userId={user.id}
+                initialRegistration={await loadInitialTeamRegistration(supabase, ev.id, user.id)}
               />
             ) : (
               <div className="mt-6">

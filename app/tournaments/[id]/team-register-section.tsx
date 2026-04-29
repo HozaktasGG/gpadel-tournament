@@ -16,15 +16,21 @@ type Props = {
   eventId: string
   eventName: string
   userId: string
+  initialRegistration?: TeamReg | null
 }
 
-export default function TeamRegisterSection({ eventId, eventName, userId }: Props) {
+export default function TeamRegisterSection({
+  eventId,
+  eventName,
+  userId,
+  initialRegistration = null,
+}: Props) {
   const supabase = createClient()
   const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [registration, setRegistration] = useState<TeamReg | null>(null)
+  const [loading, setLoading] = useState(initialRegistration === undefined)
+  const [registration, setRegistration] = useState<TeamReg | null>(initialRegistration)
   const [modalOpen, setModalOpen] = useState(false)
-  const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [toast, setToast] = useState<string | null>(null)
   const [canceling, setCanceling] = useState(false)
 
   const loadRegistration = async () => {
@@ -61,25 +67,40 @@ export default function TeamRegisterSection({ eventId, eventName, userId }: Prop
   }
 
   useEffect(() => {
-    loadRegistration()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [eventId, userId])
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 5000)
+    return () => clearTimeout(t)
+  }, [toast])
 
-  const handleSuccess = (_partnerName: string) => {
+  const handleSuccess = (partnerName: string) => {
     setModalOpen(false)
-    setSuccessMsg('Davet gönderildi! Partneriniz onayladıktan sonra admin onayına geçecek.')
+    setToast(`✅ Davet gönderildi! ${partnerName} daveti onayladıktan sonra kaydınız admin onayına geçecek.`)
     loadRegistration()
     router.refresh()
   }
 
+  const toastEl = toast ? (
+    <div
+      className="fixed top-0 left-0 right-0 z-[60] px-4 py-3 text-center text-sm font-semibold text-white shadow-lg"
+      style={{ backgroundColor: '#22c55e' }}
+      role="status"
+      aria-live="polite"
+    >
+      {toast}
+    </div>
+  ) : null
+
   if (loading) {
     return (
-      <div className="mt-6 flex items-center justify-center py-4">
-        <div
-          className="w-6 h-6 border-2 rounded-full animate-spin"
-          style={{ borderColor: '#2d5a40', borderTopColor: '#ff6b35' }}
-        />
-      </div>
+      <>
+        {toastEl}
+        <div className="mt-6 flex items-center justify-center py-4">
+          <div
+            className="w-6 h-6 border-2 rounded-full animate-spin"
+            style={{ borderColor: '#2d5a40', borderTopColor: '#ff6b35' }}
+          />
+        </div>
+      </>
     )
   }
 
@@ -121,40 +142,67 @@ export default function TeamRegisterSection({ eventId, eventName, userId }: Prop
       (registration.status === 'pending_partner' || registration.status === 'pending_approval')
 
     return (
-      <div className="mt-6">
-        <div
-          className="rounded-xl px-4 py-4 text-center"
-          style={{ backgroundColor: statusConfig.bg, border: `1px solid ${statusConfig.border}` }}
-        >
-          <p className="text-sm font-bold" style={{ color: statusConfig.color }}>
-            {statusConfig.emoji} {statusConfig.text}
-          </p>
-          <p className="text-xs text-white/70 mt-1">
-            Takım: <span className="font-bold text-white">{registration.team_name}</span>
-          </p>
-          {canCancel && (
+      <>
+        {toastEl}
+        <div className="mt-6">
+          <div
+            className="rounded-xl px-4 py-4 text-center"
+            style={{ backgroundColor: statusConfig.bg, border: `1px solid ${statusConfig.border}` }}
+          >
+            <p className="text-sm font-bold" style={{ color: statusConfig.color }}>
+              {statusConfig.emoji} {statusConfig.text}
+            </p>
+            <p className="text-xs text-white/70 mt-1">
+              Takım: <span className="font-bold text-white">{registration.team_name}</span>
+            </p>
+            {canCancel && (
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={canceling}
+                className="mt-3 px-3 py-1.5 rounded-lg text-[11px] font-semibold disabled:opacity-50"
+                style={{ backgroundColor: 'transparent', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
+              >
+                {canceling ? '...' : '🗑 Geri Çek'}
+              </button>
+            )}
+          </div>
+
+          {registration.status === 'rejected' && (
             <button
               type="button"
-              onClick={handleCancel}
-              disabled={canceling}
-              className="mt-3 px-3 py-1.5 rounded-lg text-[11px] font-semibold disabled:opacity-50"
-              style={{ backgroundColor: 'transparent', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
+              onClick={() => setModalOpen(true)}
+              className="mt-3 w-full py-3 rounded-xl text-sm font-bold text-white"
+              style={{ backgroundColor: '#ff6b35' }}
             >
-              {canceling ? '...' : '🗑 Geri Çek'}
+              🎾 Tekrar Kayıt Ol
             </button>
           )}
-        </div>
 
-        {registration.status === 'rejected' && (
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="mt-3 w-full py-3 rounded-xl text-sm font-bold text-white"
-            style={{ backgroundColor: '#ff6b35' }}
-          >
-            🎾 Tekrar Kayıt Ol
-          </button>
-        )}
+          {modalOpen && (
+            <TeamRegistrationModal
+              eventId={eventId}
+              eventName={eventName}
+              onClose={() => setModalOpen(false)}
+              onSuccess={handleSuccess}
+            />
+          )}
+        </div>
+      </>
+    )
+  }
+
+  return (
+    <>
+      {toastEl}
+      <div className="mt-6">
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className="w-full bg-[#ff6b35] text-white font-bold rounded-xl px-6 py-3 transition hover:brightness-110"
+        >
+          🎾 Takım Olarak Kayıt Ol
+        </button>
 
         {modalOpen && (
           <TeamRegistrationModal
@@ -165,39 +213,6 @@ export default function TeamRegisterSection({ eventId, eventName, userId }: Prop
           />
         )}
       </div>
-    )
-  }
-
-  return (
-    <div className="mt-6">
-      {successMsg && (
-        <div
-          className="rounded-xl px-4 py-3 mb-3 text-center"
-          style={{
-            backgroundColor: 'rgba(34,197,94,0.12)',
-            border: '1px solid rgba(34,197,94,0.35)',
-          }}
-        >
-          <p className="text-sm font-semibold text-green-300">{successMsg}</p>
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={() => setModalOpen(true)}
-        className="w-full bg-[#ff6b35] text-white font-bold rounded-xl px-6 py-3 transition hover:brightness-110"
-      >
-        🎾 Takım Olarak Kayıt Ol
-      </button>
-
-      {modalOpen && (
-        <TeamRegistrationModal
-          eventId={eventId}
-          eventName={eventName}
-          onClose={() => setModalOpen(false)}
-          onSuccess={handleSuccess}
-        />
-      )}
-    </div>
+    </>
   )
 }
