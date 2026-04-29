@@ -53,6 +53,14 @@ export default async function TournamentsPage({
 
   const eventCounts = await Promise.all(
     events.map(async ev => {
+      if (ev.format === 'Team') {
+        const { count } = await supabase
+          .from('team_registrations')
+          .select('*', { count: 'exact', head: true })
+          .eq('event_id', ev.id)
+          .eq('status', 'approved')
+        return { id: ev.id, count: (count ?? 0) * 2 }
+      }
       const { count } = await supabase
         .from('event_registrations')
         .select('*', { count: 'exact', head: true })
