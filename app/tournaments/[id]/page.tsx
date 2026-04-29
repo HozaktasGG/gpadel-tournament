@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import RegisterButton from './register-button'
+import TeamRegisterSection from './team-register-section'
 
 type EventRow = {
   id: string
@@ -650,6 +651,12 @@ export default async function TournamentDetailPage({
                   <Link href="/signup" className="underline">Sign up free</Link>
                 </p>
               </div>
+            ) : ev.format === 'Team' ? (
+              <TeamRegisterSection
+                eventId={ev.id}
+                eventName={ev.name}
+                userId={user.id}
+              />
             ) : (
               <div className="mt-6">
                 <RegisterButton

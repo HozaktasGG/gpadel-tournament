@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useAdmin } from './admin-provider'
 import { getLevel, getLevelColor } from '@/lib/quiz-questions'
+import { createClient } from '@/lib/supabase-client'
 
 type UserRow = {
   id: string
@@ -29,6 +30,37 @@ type EventReg = {
   phone: string | null
   skill_score: number | null
   skill_level: string | null
+}
+
+type TeamMemberEmbed = {
+  first_name: string | null
+  last_name: string | null
+  email: string | null
+}
+
+type TeamEventEmbed = {
+  name: string | null
+}
+
+type TeamReg = {
+  id: string
+  team_name: string
+  status: 'pending_partner' | 'pending_approval' | 'approved' | 'rejected'
+  created_at: string
+  captain: TeamMemberEmbed | null
+  partner: TeamMemberEmbed | null
+  event: TeamEventEmbed | null
+}
+
+type TeamRegRaw = Omit<TeamReg, 'captain' | 'partner' | 'event'> & {
+  captain: TeamMemberEmbed | TeamMemberEmbed[] | null
+  partner: TeamMemberEmbed | TeamMemberEmbed[] | null
+  event: TeamEventEmbed | TeamEventEmbed[] | null
+}
+
+function unwrapOne<T>(v: T | T[] | null): T | null {
+  if (Array.isArray(v)) return v[0] ?? null
+  return v
 }
 
 type EventRow = {
@@ -87,6 +119,11 @@ export default function AdminPage() {
   const [editingEvent, setEditingEvent] = useState<EventRow | null>(null)
   const [eventActionLoading, setEventActionLoading] = useState<string | null>(null)
 
+  const [teamRegs, setTeamRegs] = useState<TeamReg[]>([])
+  const [teamRegsLoading, setTeamRegsLoading] = useState(true)
+  const [teamActionLoading, setTeamActionLoading] = useState<string | null>(null)
+  const supabaseBrowser = createClient()
+
   const fetchUsers = async () => {
     setUsersLoading(true)
     const res = await fetch('/api/admin/users', {
@@ -123,12 +160,36 @@ export default function AdminPage() {
     if (res.ok) setEvents(data.data ?? [])
   }
 
+  const fetchTeamRegs = async () => {
+    setTeamRegsLoading(true)
+    const { data } = await supabaseBrowser
+      .from('team_registrations')
+      .select(
+        'id, team_name, status, created_at, captain:profiles!team_registrations_captain_id_fkey(first_name, last_name, email), partner:profiles!team_registrations_partner_id_fkey(first_name, last_name, email), event:events(name)'
+      )
+      .order('created_at', { ascending: false })
+
+    const rows = ((data ?? []) as unknown as TeamRegRaw[]).map<TeamReg>(r => ({
+      id: r.id,
+      team_name: r.team_name,
+      status: r.status,
+      created_at: r.created_at,
+      captain: unwrapOne(r.captain),
+      partner: unwrapOne(r.partner),
+      event: unwrapOne(r.event),
+    }))
+    setTeamRegs(rows)
+    setTeamRegsLoading(false)
+  }
+
   useEffect(() => {
     if (password) {
       fetchUsers()
       fetchEventRegs()
       fetchEvents()
+      fetchTeamRegs()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [password])
 
   const handleCreateEvent = async (e: React.FormEvent) => {
@@ -238,6 +299,39 @@ export default function AdminPage() {
     })
     await fetchEventRegs()
     setActionLoading(null)
+  }
+
+  const handleTeamApproval = async (id: string, action: 'approve' | 'reject') => {
+    setTeamActionLoading(id)
+    const res = await fetch('/api/admin/team-approval', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registration_id: id, action }),
+    })
+    const data = await res.json()
+    setTeamActionLoading(null)
+    if (!res.ok) {
+      alert(data.error || 'İşlem başarısız.')
+      return
+    }
+    await fetchTeamRegs()
+  }
+
+  const teamStatusBadge = (status: TeamReg['status']) => {
+    const config = {
+      pending_partner:  { text: 'Partner Bekleniyor',     bg: 'rgba(234,179,8,0.15)',  color: '#eab308' },
+      pending_approval: { text: 'Admin Onayı Bekleniyor', bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' },
+      approved:         { text: 'Onaylandı',              bg: 'rgba(34,197,94,0.15)',  color: '#22c55e' },
+      rejected:         { text: 'Reddedildi',             bg: 'rgba(239,68,68,0.15)',  color: '#f87171' },
+    }[status]
+    return (
+      <span
+        className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap"
+        style={{ backgroundColor: config.bg, color: config.color }}
+      >
+        {config.text}
+      </span>
+    )
   }
 
   const approved = eventRegs.filter(r => r.status === 'approved').length
@@ -365,6 +459,7 @@ export default function AdminPage() {
                   <option value="Americano">Americano</option>
                   <option value="Round Robin">Round Robin</option>
                   <option value="Elimination">Elimination</option>
+                  <option value="Team">Team</option>
                 </select>
               </label>
 
@@ -691,6 +786,98 @@ export default function AdminPage() {
             </div>
           )}
         </section>
+
+        {/* ── TEAM REGISTRATIONS ── */}
+        <section
+          className="rounded-2xl p-6 mt-6"
+          style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-lg font-bold text-white">
+              Takım Kayıtları
+              {!teamRegsLoading && (
+                <span className="ml-2 text-sm font-normal text-white/50">({teamRegs.length})</span>
+              )}
+            </h2>
+            {!teamRegsLoading && teamRegs.length > 0 && (
+              <div className="flex gap-3 text-xs text-white/60">
+                <span>
+                  <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-1" />
+                  {teamRegs.filter(t => t.status === 'pending_approval').length} onay bekliyor
+                </span>
+              </div>
+            )}
+          </div>
+
+          {teamRegsLoading ? (
+            <p className="text-sm text-white/50">Yükleniyor...</p>
+          ) : teamRegs.length === 0 ? (
+            <p className="text-sm text-white/50">Henüz takım kaydı yok.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                    {['Takım', 'Kaptan', 'Partner', 'Etkinlik', 'Durum', 'İşlem'].map(h => (
+                      <th key={h} className="text-left text-xs font-semibold text-white/40 uppercase tracking-wide pb-3 pr-4">
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamRegs.map(t => {
+                    const captainName = [t.captain?.first_name, t.captain?.last_name].filter(Boolean).join(' ') || '—'
+                    const partnerName = [t.partner?.first_name, t.partner?.last_name].filter(Boolean).join(' ') || '—'
+                    const isActing = teamActionLoading === t.id
+                    const canAct = t.status === 'pending_approval'
+                    return (
+                      <tr key={t.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <td className="py-3 pr-4 whitespace-nowrap">
+                          <p className="font-bold" style={{ color: '#ff6b35' }}>{t.team_name}</p>
+                        </td>
+                        <td className="py-3 pr-4 text-white/80">
+                          <p className="font-medium whitespace-nowrap">{captainName}</p>
+                          {t.captain?.email && <p className="text-white/40 text-xs">{t.captain.email}</p>}
+                        </td>
+                        <td className="py-3 pr-4 text-white/80">
+                          <p className="font-medium whitespace-nowrap">{partnerName}</p>
+                          {t.partner?.email && <p className="text-white/40 text-xs">{t.partner.email}</p>}
+                        </td>
+                        <td className="py-3 pr-4 text-white/70 whitespace-nowrap">{t.event?.name ?? '—'}</td>
+                        <td className="py-3 pr-4">{teamStatusBadge(t.status)}</td>
+                        <td className="py-3">
+                          {canAct ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleTeamApproval(t.id, 'approve')}
+                                disabled={isActing}
+                                className="px-3 py-1 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                                style={{ backgroundColor: '#22c55e' }}
+                              >
+                                {isActing ? '...' : '✅ Onayla'}
+                              </button>
+                              <button
+                                onClick={() => handleTeamApproval(t.id, 'reject')}
+                                disabled={isActing}
+                                className="px-3 py-1 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
+                                style={{ backgroundColor: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
+                              >
+                                {isActing ? '...' : '❌ Reddet'}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-white/30 text-xs">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
       </div>
 
       {/* Event Edit Modal */}
@@ -789,6 +976,7 @@ export default function AdminPage() {
                     <option value="Americano">Americano</option>
                     <option value="Round Robin">Round Robin</option>
                     <option value="Elimination">Elimination</option>
+                    <option value="Team">Team</option>
                   </select>
                 </label>
                 <label className="block">
