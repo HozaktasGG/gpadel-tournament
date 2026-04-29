@@ -102,7 +102,7 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
         supabase
           .from('team_registrations')
           .select(
-            'id, team_name, status, created_at, event:events(name, date), partner:profiles!team_registrations_partner_id_fkey(first_name, last_name, avatar_url)'
+            'id, team_name, status, created_at, event:events(name, date), partner:profiles(first_name, last_name, avatar_url)'
           )
           .eq('captain_id', userId)
           .in('status', ['pending_partner', 'pending_approval'])
@@ -110,7 +110,7 @@ export default function TeamInvitesSection({ userId }: { userId: string }) {
         supabase
           .from('team_registrations')
           .select(
-            'id, team_name, status, created_at, event:events(name, date), captain:profiles!team_registrations_captain_id_fkey(first_name, last_name, avatar_url)'
+            'id, team_name, status, created_at, event:events(name, date), captain:profiles(first_name, last_name, avatar_url)'
           )
           .eq('partner_id', userId)
           .eq('status', 'pending_partner')
