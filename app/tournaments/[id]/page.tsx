@@ -248,12 +248,13 @@ export default async function TournamentDetailPage({
   }
 
   if (user) {
-    const { data: phoneRow } = await supabase
+    const { data: profileData } = await supabase
       .from('profiles')
-      .select('phone')
+      .select('id, first_name, last_name, skill_score, skill_level, phone, player_code, avatar_url')
       .eq('id', user.id)
-      .maybeSingle<{ phone: string | null }>()
-    userPhone = phoneRow?.phone ?? null
+      .single<{ phone: string | null }>()
+    const hasPhone = !!profileData?.phone && profileData.phone.trim().length > 0
+    userPhone = hasPhone ? profileData!.phone!.trim() : null
   }
 
   const sorted = participants

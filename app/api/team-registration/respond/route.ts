@@ -209,13 +209,14 @@ export async function POST(req: NextRequest) {
   const accepted = action === 'accept'
 
   if (accepted) {
-    const { data: profile } = await supabaseAdmin
+    const { data: partnerProfile } = await supabaseAdmin
       .from('profiles')
-      .select('phone')
+      .select('phone, first_name, last_name, email')
       .eq('id', user.id)
-      .maybeSingle<{ phone: string | null }>()
+      .single<{ phone: string | null; first_name: string | null; last_name: string | null; email: string | null }>()
 
-    if (!profile?.phone || profile.phone.trim() === '') {
+    const hasPhone = !!partnerProfile?.phone && partnerProfile.phone.trim().length > 0
+    if (!hasPhone) {
       return NextResponse.json(
         { error: 'Please add a phone number to your profile first.' },
         { status: 400 }

@@ -124,18 +124,26 @@ export default function ProfilePage() {
     } = await supabase.auth.getUser()
     if (!user) return
 
+    const trimmedPhone = phone.trim()
+    console.log('Saving phone:', trimmedPhone)
+
     const { error } = await supabase
       .from('profiles')
       .update({
         first_name: firstName,
         last_name: lastName,
-        phone: phone,
+        phone: trimmedPhone,
         updated_at: new Date().toISOString(),
       })
       .eq('id', user.id)
 
     setSavingProfile(false)
-    setProfileMsg(error ? error.message : 'Saved ✓')
+    if (error) {
+      setProfileMsg(error.message)
+    } else {
+      setPhone(trimmedPhone)
+      setProfileMsg('Saved ✓')
+    }
     setTimeout(() => setProfileMsg(''), 3000)
   }
 
