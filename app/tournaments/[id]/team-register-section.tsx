@@ -9,6 +9,7 @@ type TeamReg = {
   id: string
   status: 'pending_partner' | 'pending_approval' | 'approved' | 'rejected'
   team_name: string
+  captain_id: string
 }
 
 type Props = {
@@ -24,11 +25,12 @@ export default function TeamRegisterSection({ eventId, eventName, userId }: Prop
   const [registration, setRegistration] = useState<TeamReg | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
+  const [canceling, setCanceling] = useState(false)
 
   const loadRegistration = async () => {
     const { data } = await supabase
       .from('team_registrations')
-      .select('id, status, team_name')
+      .select('id, status, team_name, captain_id')
       .eq('event_id', eventId)
       .or(`captain_id.eq.${userId},partner_id.eq.${userId}`)
       .neq('status', 'rejected')
@@ -37,6 +39,25 @@ export default function TeamRegisterSection({ eventId, eventName, userId }: Prop
       .maybeSingle<TeamReg>()
     setRegistration(data ?? null)
     setLoading(false)
+  }
+
+  const handleCancel = async () => {
+    if (!registration) return
+    if (!confirm('Bu takım davetini geri çekmek istediğinize emin misiniz?')) return
+    setCanceling(true)
+    const res = await fetch('/api/team-registration/cancel', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ registration_id: registration.id }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setCanceling(false)
+    if (!res.ok) {
+      alert(data.error || 'İşlem başarısız.')
+      return
+    }
+    router.refresh()
+    loadRegistration()
   }
 
   useEffect(() => {
@@ -94,6 +115,11 @@ export default function TeamRegisterSection({ eventId, eventName, userId }: Prop
       },
     }[registration.status]
 
+    const isCaptain = registration.captain_id === userId
+    const canCancel =
+      isCaptain &&
+      (registration.status === 'pending_partner' || registration.status === 'pending_approval')
+
     return (
       <div className="mt-6">
         <div
@@ -106,6 +132,17 @@ export default function TeamRegisterSection({ eventId, eventName, userId }: Prop
           <p className="text-xs text-white/70 mt-1">
             Takım: <span className="font-bold text-white">{registration.team_name}</span>
           </p>
+          {canCancel && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              disabled={canceling}
+              className="mt-3 px-3 py-1.5 rounded-lg text-[11px] font-semibold disabled:opacity-50"
+              style={{ backgroundColor: 'transparent', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
+            >
+              {canceling ? '...' : '🗑 Geri Çek'}
+            </button>
+          )}
         </div>
 
         {registration.status === 'rejected' && (

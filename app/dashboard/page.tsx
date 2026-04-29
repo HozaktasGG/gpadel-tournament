@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import { getLevel, getLevelColor } from '@/lib/quiz-questions'
+import TeamInvitesSection from './team-invites-section'
 
 type Profile = {
   id: string
@@ -291,6 +292,8 @@ export default async function DashboardPage() {
             </div>
           )}
         </section>
+
+        <TeamInvitesSection userId={user.id} />
 
         {past.length > 0 && (
           <section className="mt-10">
