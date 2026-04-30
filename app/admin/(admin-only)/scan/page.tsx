@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useAdmin } from '../admin-provider'
+import { useAdmin } from '../../admin-provider'
 
 type Registration = {
   id: string

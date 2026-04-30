@@ -14,14 +14,24 @@ export default async function AdminLayout({
 
   if (!user) redirect('/signin?redirect=/admin')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('is_admin')
-    .eq('id', user.id)
-    .maybeSingle()
+  const [{ data: profile }, { data: managed }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('event_managers')
+      .select('id')
+      .eq('user_id', user.id)
+      .limit(1),
+  ])
 
-  if (!profile?.is_admin) {
-    redirect('/signin?error=admin_required&redirect=/admin')
+  const isAdmin = !!profile?.is_admin
+  const isManager = (managed ?? []).length > 0
+
+  if (!isAdmin && !isManager) {
+    redirect('/dashboard')
   }
 
   return (
