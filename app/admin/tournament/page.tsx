@@ -23,54 +23,16 @@ export default function AdminTournamentPage() {
   const [events, setEvents] = useState<EventRow[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<EventRow | null>(null)
-  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
     if (!password) return
     let cancelled = false
     const load = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        if (!cancelled) setLoading(false)
-        return
-      }
-
-      const [{ data: profile }, { data: managers }] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.id)
-          .maybeSingle<{ is_admin: boolean | null }>(),
-        supabase
-          .from('event_managers')
-          .select('event_id')
-          .eq('user_id', user.id),
-      ])
-
-      if (cancelled) return
-
-      const admin = !!profile?.is_admin
-      const managedIds = (managers ?? []).map(m => m.event_id as string)
-      setIsAdmin(admin)
-
-      let query = supabase
+      const { data } = await supabase
         .from('events')
         .select('id, name, date, time, location, format, status, max_players')
         .in('status', ['upcoming', 'active'])
         .order('date', { ascending: true })
-
-      if (!admin) {
-        if (managedIds.length === 0) {
-          if (!cancelled) {
-            setEvents([])
-            setLoading(false)
-          }
-          return
-        }
-        query = query.in('id', managedIds)
-      }
-
-      const { data } = await query
       if (cancelled) return
       setEvents((data ?? []) as EventRow[])
       setLoading(false)
@@ -106,9 +68,7 @@ export default function AdminTournamentPage() {
             <img src="/smashpadel_logo.png" alt="Smash Padel" width={44} height={44} className="rounded-full" />
             <h1 className="text-lg font-bold text-white">Tournament Admin</h1>
           </div>
-          {isAdmin && (
-            <a href="/admin" className="text-sm text-white/60 hover:text-white">← Admin</a>
-          )}
+          <a href="/admin" className="text-sm text-white/60 hover:text-white">← Admin</a>
         </div>
 
         <h2 className="text-2xl font-bold text-white mb-2">Select a Tournament</h2>

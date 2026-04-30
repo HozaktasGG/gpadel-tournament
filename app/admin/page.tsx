@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAdmin } from '../admin-provider'
+import { useAdmin } from './admin-provider'
 import { getLevel, getLevelColor } from '@/lib/quiz-questions'
 import { createClient } from '@/lib/supabase-client'
 
@@ -65,14 +65,6 @@ type PendingInvite = {
   status: 'pending_partner' | 'pending_approval'
   created_at: string
   event_name: string | null
-}
-
-type EventManager = {
-  id: string
-  user_id: string
-  event_id: string
-  profile: { first_name: string | null; last_name: string | null; email: string | null } | null
-  event: { id: string; name: string; date: string } | null
 }
 
 type PendingInviteRaw = {
@@ -162,12 +154,6 @@ export default function AdminPage() {
   const [syncingUsers, setSyncingUsers] = useState(false)
   const [syncMsg, setSyncMsg] = useState<string | null>(null)
 
-  const [eventManagers, setEventManagers] = useState<EventManager[]>([])
-  const [eventManagersLoading, setEventManagersLoading] = useState(true)
-  const [emForm, setEmForm] = useState<{ eventId: string; email: string }>({ eventId: '', email: '' })
-  const [emBusy, setEmBusy] = useState(false)
-  const [emMsg, setEmMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
-
   const supabaseBrowser = createClient()
 
   const fetchUsers = async () => {
@@ -228,64 +214,12 @@ export default function AdminPage() {
     setTeamRegsLoading(false)
   }
 
-  const fetchEventManagers = async () => {
-    setEventManagersLoading(true)
-    const res = await fetch('/api/admin/event-managers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    })
-    const data = await res.json()
-    setEventManagersLoading(false)
-    if (res.ok) setEventManagers((data.data ?? []) as EventManager[])
-  }
-
-  const handleAssignManager = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setEmMsg(null)
-    if (!emForm.eventId || !emForm.email.trim()) {
-      setEmMsg({ type: 'error', text: 'Pick an event and enter an email.' })
-      return
-    }
-    setEmBusy(true)
-    const res = await fetch('/api/admin/event-managers', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, eventId: emForm.eventId, email: emForm.email.trim() }),
-    })
-    const data = await res.json()
-    setEmBusy(false)
-    if (!res.ok) {
-      setEmMsg({ type: 'error', text: data.error ?? 'Assignment failed.' })
-      return
-    }
-    setEmMsg({ type: 'success', text: 'Manager assigned.' })
-    setEmForm({ eventId: '', email: '' })
-    await fetchEventManagers()
-  }
-
-  const handleRemoveManager = async (id: string) => {
-    if (!confirm('Remove this manager?')) return
-    const res = await fetch('/api/admin/event-managers', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, id }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      alert(data.error ?? 'Remove failed.')
-      return
-    }
-    await fetchEventManagers()
-  }
-
   useEffect(() => {
     if (password) {
       fetchUsers()
       fetchEventRegs()
       fetchEvents()
       fetchTeamRegs()
-      fetchEventManagers()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [password])
@@ -937,111 +871,6 @@ export default function AdminPage() {
                             style={{ backgroundColor: 'rgba(255,107,53,0.2)', border: '1px solid rgba(255,107,53,0.4)' }}
                           >
                             Details
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        {/* ── EVENT MANAGERS ── */}
-        <section
-          className="rounded-2xl p-6 mb-8"
-          style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
-        >
-          <h2 className="text-lg font-bold text-white mb-4">
-            Event Managers
-            {!eventManagersLoading && (
-              <span className="ml-2 text-sm font-normal text-white/50">({eventManagers.length})</span>
-            )}
-          </h2>
-
-          <form onSubmit={handleAssignManager} className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-            <select
-              value={emForm.eventId}
-              onChange={e => setEmForm({ ...emForm, eventId: e.target.value })}
-              className="px-3 py-2 rounded-lg text-sm text-white outline-none"
-              style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
-            >
-              <option value="">Select event…</option>
-              {events.map(ev => (
-                <option key={ev.id} value={ev.id}>
-                  {ev.name} ({ev.date})
-                </option>
-              ))}
-            </select>
-            <input
-              type="email"
-              value={emForm.email}
-              onChange={e => setEmForm({ ...emForm, email: e.target.value })}
-              placeholder="user@example.com"
-              className="px-3 py-2 rounded-lg text-sm text-white outline-none"
-              style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
-            />
-            <button
-              type="submit"
-              disabled={emBusy}
-              className="px-4 py-2 rounded-lg text-sm font-bold text-white disabled:opacity-50"
-              style={{ backgroundColor: '#ff6b35' }}
-            >
-              {emBusy ? 'Assigning…' : 'Assign Manager'}
-            </button>
-          </form>
-
-          {emMsg && (
-            <div
-              className="px-4 py-2.5 rounded-lg text-sm font-semibold mb-4"
-              style={
-                emMsg.type === 'success'
-                  ? { backgroundColor: 'rgba(34,197,94,0.15)', color: '#22c55e', border: '1px solid rgba(34,197,94,0.3)' }
-                  : { backgroundColor: 'rgba(239,68,68,0.15)', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' }
-              }
-            >
-              {emMsg.text}
-            </div>
-          )}
-
-          {eventManagersLoading ? (
-            <p className="text-sm text-white/50">Loading...</p>
-          ) : eventManagers.length === 0 ? (
-            <p className="text-sm text-white/50">No managers assigned yet.</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    {['Event', 'Manager', 'Email', ''].map(h => (
-                      <th key={h} className="text-left text-xs font-semibold text-white/40 uppercase tracking-wide pb-3 pr-4">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {eventManagers.map(m => {
-                    const name = m.profile
-                      ? [m.profile.first_name, m.profile.last_name].filter(Boolean).join(' ').trim() || '—'
-                      : '—'
-                    return (
-                      <tr key={m.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td className="py-3 pr-4 text-white whitespace-nowrap">
-                          <p className="font-medium">{m.event?.name ?? '—'}</p>
-                          {m.event?.date && <p className="text-white/40 text-xs">{m.event.date}</p>}
-                        </td>
-                        <td className="py-3 pr-4 text-white/80 whitespace-nowrap">{name}</td>
-                        <td className="py-3 pr-4 text-white/60 whitespace-nowrap">{m.profile?.email ?? '—'}</td>
-                        <td className="py-3">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveManager(m.id)}
-                            className="px-3 py-1 rounded-lg text-xs font-semibold disabled:opacity-50"
-                            style={{ backgroundColor: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
-                          >
-                            Remove
                           </button>
                         </td>
                       </tr>
