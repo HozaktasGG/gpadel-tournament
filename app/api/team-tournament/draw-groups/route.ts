@@ -3,6 +3,36 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const GROUPS = ['A', 'B', 'C', 'D'] as const
 
+// Court schedule from the official PDF.
+// Each row: [slot 1-8, court 1-3, group A-D, team position 1-4, team position 1-4]
+// Slots 1-4 host Groups A & B; slots 5-8 host Groups C & D.
+const SCHEDULE: Array<[number, number, 'A' | 'B' | 'C' | 'D', number, number]> = [
+  [1, 1, 'A', 1, 2],
+  [1, 2, 'A', 3, 4],
+  [1, 3, 'B', 1, 2],
+  [2, 1, 'B', 3, 4],
+  [2, 2, 'A', 1, 3],
+  [2, 3, 'A', 2, 4],
+  [3, 1, 'B', 1, 3],
+  [3, 2, 'B', 2, 4],
+  [3, 3, 'A', 1, 4],
+  [4, 1, 'A', 2, 3],
+  [4, 2, 'B', 1, 4],
+  [4, 3, 'B', 2, 3],
+  [5, 1, 'C', 1, 2],
+  [5, 2, 'C', 3, 4],
+  [5, 3, 'D', 1, 2],
+  [6, 1, 'D', 3, 4],
+  [6, 2, 'C', 1, 3],
+  [6, 3, 'C', 2, 4],
+  [7, 1, 'D', 1, 3],
+  [7, 2, 'D', 2, 4],
+  [7, 3, 'C', 1, 4],
+  [8, 1, 'C', 2, 3],
+  [8, 2, 'D', 1, 4],
+  [8, 3, 'D', 2, 3],
+]
+
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -66,7 +96,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to create groups: ' + groupsErr.message }, { status: 500 })
   }
 
-  // Generate group matches: round-robin for 4 teams = 6 matches per group
+  const teamFor = (group: string, pos: number): string => {
+    const row = groupRows.find(r => r.group_name === group && r.position === pos)
+    if (!row) throw new Error(`Missing team ${group}${pos}`)
+    return row.team_registration_id
+  }
+
   type MatchInsert = {
     event_id: string
     phase: 'group'
@@ -76,30 +111,15 @@ export async function POST(req: NextRequest) {
     team2_id: string
     match_order: number
   }
-  const matchRows: MatchInsert[] = []
-  let matchOrder = 1
-  for (const groupName of GROUPS) {
-    const groupTeams = groupRows
-      .filter(r => r.group_name === groupName)
-      .sort((a, b) => a.position - b.position)
-    const t = groupTeams.map(g => g.team_registration_id)
-    const pairings: Array<[number, number, number]> = [
-      [1, 0, 1], [1, 2, 3],
-      [2, 0, 2], [2, 1, 3],
-      [3, 0, 3], [3, 1, 2],
-    ]
-    for (const [round, i, j] of pairings) {
-      matchRows.push({
-        event_id: eventId,
-        phase: 'group',
-        group_name: groupName,
-        round_number: round,
-        team1_id: t[i],
-        team2_id: t[j],
-        match_order: matchOrder++,
-      })
-    }
-  }
+  const matchRows: MatchInsert[] = SCHEDULE.map(([slot, court, group, pos1, pos2]) => ({
+    event_id: eventId,
+    phase: 'group',
+    group_name: group,
+    round_number: slot,
+    team1_id: teamFor(group, pos1),
+    team2_id: teamFor(group, pos2),
+    match_order: court,
+  }))
 
   const { error: matchesErr } = await supabaseAdmin
     .from('team_tournament_matches')

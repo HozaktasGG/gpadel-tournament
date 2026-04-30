@@ -361,114 +361,141 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
       {groups.length > 0 && (
         <section className="mb-8">
           <h2 className="text-sm font-semibold text-white mb-3">Phase 2 — Group Stage</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+
+          {/* Group standings */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
             {GROUP_NAMES.map(gName => {
               const standings = standingsForGroup(gName)
-              const gMatches = groupMatches
-                .filter(m => m.group_name === gName)
-                .sort((a, b) => (a.round_number ?? 0) - (b.round_number ?? 0))
               return (
                 <div
                   key={gName}
                   className="rounded-xl overflow-hidden"
                   style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}
                 >
-                  <div className="px-4 py-3" style={{ backgroundColor: '#1a3d2e' }}>
-                    <p className="text-sm font-bold text-white">Group {gName}</p>
+                  <div className="px-3 py-2" style={{ backgroundColor: '#1a3d2e' }}>
+                    <p className="text-xs font-bold text-white">Group {gName}</p>
                   </div>
-                  <div className="p-3">
-                    <table className="w-full text-xs mb-3">
-                      <thead>
-                        <tr className="text-white/50 text-[10px] uppercase tracking-wider">
-                          <th className="text-left py-1.5 px-1">#</th>
-                          <th className="text-left py-1 px-1">Team</th>
-                          <th className="text-right py-1 px-1">W</th>
-                          <th className="text-right py-1 px-1">+/-</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {standings.map((s, i) => (
-                          <tr key={s.team_id} style={{ borderTop: '1px solid #2d5a40' }}>
-                            <td className="py-1.5 px-1 font-bold text-white">{i + 1}</td>
-                            <td className="py-1 px-1 text-white truncate">{teamLabel(s.team_id)}</td>
-                            <td className="py-1 px-1 text-right tabular-nums text-white">{s.wins}</td>
-                            <td
-                              className="py-1 px-1 text-right tabular-nums font-bold"
-                              style={{ color: s.setsDiff > 0 ? '#4ade80' : s.setsDiff < 0 ? '#f87171' : '#9ca3af' }}
-                            >
-                              {s.setsDiff > 0 ? `+${s.setsDiff}` : s.setsDiff}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-
-                    {gMatches.map(m => {
-                      const input = scoreInputs[m.id] ?? { t1: '', t2: '' }
-                      const scored = m.team1_score !== null && m.team2_score !== null
-                      return (
-                        <div
-                          key={m.id}
-                          className="rounded-lg p-2 mb-2"
-                          style={{
-                            backgroundColor: '#1a3d2e',
-                            border: `1px solid ${scored ? '#ff6b35' : '#2d5a40'}`,
-                          }}
-                        >
-                          <p className="text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: '#ff6b35' }}>
-                            Round {m.round_number}
-                          </p>
-                          <div className="flex items-center gap-1.5">
-                            <p className="flex-1 text-[11px] font-semibold text-white truncate">{teamLabel(m.team1_id)}</p>
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              min="0"
-                              value={input.t1}
-                              onChange={e =>
-                                setScoreInputs(prev => ({
-                                  ...prev,
-                                  [m.id]: { ...input, t1: e.target.value },
-                                }))
-                              }
-                              className="w-9 text-center text-xs font-bold rounded py-1 outline-none text-white"
-                              style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}
-                            />
-                            <span className="text-white/50 text-[10px]">:</span>
-                            <input
-                              type="number"
-                              inputMode="numeric"
-                              min="0"
-                              value={input.t2}
-                              onChange={e =>
-                                setScoreInputs(prev => ({
-                                  ...prev,
-                                  [m.id]: { ...input, t2: e.target.value },
-                                }))
-                              }
-                              className="w-9 text-center text-xs font-bold rounded py-1 outline-none text-white"
-                              style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}
-                            />
-                            <p className="flex-1 text-[11px] font-semibold text-white truncate text-right">{teamLabel(m.team2_id)}</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleSaveMatch(m.id)}
-                            className="mt-1.5 w-full py-1 rounded text-[10px] font-semibold text-white"
-                            style={{
-                              backgroundColor: scored ? '#16a34a' : '#0f2318',
-                              border: '1px solid #2d5a40',
-                            }}
+                  <table className="w-full text-[11px]">
+                    <thead>
+                      <tr className="text-white/50 text-[9px] uppercase tracking-wider">
+                        <th className="text-left py-1 px-2">#</th>
+                        <th className="text-left py-1 px-1">Team</th>
+                        <th className="text-right py-1 px-1">W</th>
+                        <th className="text-right py-1 px-2">+/-</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {standings.map((s, i) => (
+                        <tr key={s.team_id} style={{ borderTop: '1px solid #2d5a40' }}>
+                          <td className="py-1 px-2 font-bold text-white">{i + 1}</td>
+                          <td className="py-1 px-1 text-white truncate max-w-[80px]">{teamLabel(s.team_id)}</td>
+                          <td className="py-1 px-1 text-right tabular-nums text-white">{s.wins}</td>
+                          <td
+                            className="py-1 px-2 text-right tabular-nums font-bold"
+                            style={{ color: s.setsDiff > 0 ? '#4ade80' : s.setsDiff < 0 ? '#f87171' : '#9ca3af' }}
                           >
-                            {busyMatchId === m.id ? 'Saving...' : scored ? '✓ Update' : 'Save'}
-                          </button>
-                        </div>
-                      )
-                    })}
-                  </div>
+                            {s.setsDiff > 0 ? `+${s.setsDiff}` : s.setsDiff}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )
             })}
+          </div>
+
+          {/* Court schedule */}
+          <div className="mb-6">
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Court Schedule</p>
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map(slot => {
+                const slotMatches = groupMatches
+                  .filter(m => m.round_number === slot)
+                  .sort((a, b) => (a.match_order ?? 0) - (b.match_order ?? 0))
+                if (slotMatches.length === 0) return null
+                return (
+                  <div
+                    key={slot}
+                    className="rounded-xl overflow-hidden"
+                    style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}
+                  >
+                    <div className="px-4 py-2 flex items-center justify-between" style={{ backgroundColor: '#1a3d2e' }}>
+                      <p className="text-sm font-bold text-white">Slot {slot}</p>
+                      <p className="text-[10px] uppercase tracking-widest text-white/50">
+                        {slot <= 4 ? 'Groups A · B' : 'Groups C · D'}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x" style={{ borderColor: '#2d5a40' }}>
+                      {slotMatches.map(m => {
+                        const input = scoreInputs[m.id] ?? { t1: '', t2: '' }
+                        const scored = m.team1_score !== null && m.team2_score !== null
+                        return (
+                          <div
+                            key={m.id}
+                            className="p-3"
+                            style={{ borderColor: '#2d5a40' }}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#ff6b35' }}>
+                                Court {m.match_order} · Group {m.group_name}
+                              </p>
+                              {scored && (
+                                <span className="text-[9px] font-bold text-green-300 uppercase tracking-widest">Saved</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <p className="flex-1 text-xs font-semibold text-white truncate">{teamLabel(m.team1_id)}</p>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min="0"
+                                value={input.t1}
+                                onChange={e =>
+                                  setScoreInputs(prev => ({
+                                    ...prev,
+                                    [m.id]: { ...input, t1: e.target.value },
+                                  }))
+                                }
+                                className="w-10 text-center text-sm font-bold rounded py-1 outline-none text-white"
+                                style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+                              />
+                              <span className="text-white/50 text-xs">:</span>
+                              <input
+                                type="number"
+                                inputMode="numeric"
+                                min="0"
+                                value={input.t2}
+                                onChange={e =>
+                                  setScoreInputs(prev => ({
+                                    ...prev,
+                                    [m.id]: { ...input, t2: e.target.value },
+                                  }))
+                                }
+                                className="w-10 text-center text-sm font-bold rounded py-1 outline-none text-white"
+                                style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+                              />
+                              <p className="flex-1 text-xs font-semibold text-white truncate text-right">{teamLabel(m.team2_id)}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveMatch(m.id)}
+                              className="mt-2 w-full py-1.5 rounded text-[11px] font-semibold text-white"
+                              style={{
+                                backgroundColor: scored ? '#16a34a' : '#1a3d2e',
+                                border: '1px solid #2d5a40',
+                              }}
+                            >
+                              {busyMatchId === m.id ? 'Saving...' : scored ? '✓ Update' : 'Save Score'}
+                            </button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </div>
 
           {groupStageComplete && knockoutMatches.length === 0 && (
