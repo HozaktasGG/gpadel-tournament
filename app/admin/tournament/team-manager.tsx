@@ -420,11 +420,8 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
                     className="rounded-xl overflow-hidden"
                     style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}
                   >
-                    <div className="px-4 py-2 flex items-center justify-between" style={{ backgroundColor: '#1a3d2e' }}>
+                    <div className="px-4 py-2" style={{ backgroundColor: '#1a3d2e' }}>
                       <p className="text-sm font-bold text-white">Slot {slot}</p>
-                      <p className="text-[10px] uppercase tracking-widest text-white/50">
-                        {slot <= 4 ? 'Groups A · B' : 'Groups C · D'}
-                      </p>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x" style={{ borderColor: '#2d5a40' }}>
                       {slotMatches.map(m => {
