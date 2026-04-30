@@ -151,6 +151,9 @@ export default function AdminPage() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
 
+  const [syncingUsers, setSyncingUsers] = useState(false)
+  const [syncMsg, setSyncMsg] = useState<string | null>(null)
+
   const supabaseBrowser = createClient()
 
   const fetchUsers = async () => {
@@ -252,6 +255,29 @@ export default function AdminPage() {
     return () => { cancelled = true }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedUser?.id])
+
+  const handleSyncUsers = async () => {
+    setSyncingUsers(true)
+    setSyncMsg(null)
+    try {
+      const res = await fetch('/api/admin/sync-users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setSyncMsg(data.error || 'Sync failed')
+        return
+      }
+      setSyncMsg(`Synced ${data.synced} new user${data.synced === 1 ? '' : 's'}, updated ${data.updated} name${data.updated === 1 ? '' : 's'}`)
+      await fetchUsers()
+    } catch (err) {
+      setSyncMsg('Network error: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setSyncingUsers(false)
+    }
+  }
 
   const handleCancelInvite = async (registrationId: string) => {
     if (!confirm('Bu takım davetini geri çekmek istediğinize emin misiniz?')) return
@@ -774,12 +800,26 @@ export default function AdminPage() {
           className="rounded-2xl p-6 mb-8"
           style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
         >
-          <h2 className="text-lg font-bold text-white mb-4">
-            All Users
-            {!usersLoading && (
-              <span className="ml-2 text-sm font-normal text-white/50">({users.length})</span>
-            )}
-          </h2>
+          <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
+            <h2 className="text-lg font-bold text-white">
+              All Users
+              {!usersLoading && (
+                <span className="ml-2 text-sm font-normal text-white/50">({users.length})</span>
+              )}
+            </h2>
+            <button
+              type="button"
+              onClick={handleSyncUsers}
+              disabled={syncingUsers}
+              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white disabled:opacity-50"
+              style={{ backgroundColor: '#ff6b35' }}
+            >
+              {syncingUsers ? 'Syncing...' : '🔄 Sync Users'}
+            </button>
+          </div>
+          {syncMsg && (
+            <p className="text-xs text-white/70 mb-3">{syncMsg}</p>
+          )}
 
           {usersLoading ? (
             <p className="text-sm text-white/50">Loading...</p>
