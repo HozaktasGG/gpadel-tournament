@@ -7,10 +7,13 @@ const ZERO = '00000000-0000-0000-0000-000000000000'
 
 export async function POST(req: Request) {
   try {
-    const { password } = await req.json()
+    const { password, eventId } = await req.json()
 
     if (password !== process.env.ADMIN_PASSWORD) {
       return NextResponse.json({ error: 'Wrong password' }, { status: 401 })
+    }
+    if (!eventId || typeof eventId !== 'string') {
+      return NextResponse.json({ error: 'Missing eventId' }, { status: 400 })
     }
 
     const supabase = createClient(
@@ -18,22 +21,11 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Find today's event
-    const { data: eventData, error: eventError } = await supabase
-      .from('events')
-      .select('id')
-      .eq('date', '2026-04-24')
-      .maybeSingle()
-
-    if (eventError || !eventData) {
-      return NextResponse.json({ error: 'No event found for 2026-04-24' }, { status: 404 })
-    }
-
-    // Fetch approved registrations
+    // Fetch approved registrations for the selected event
     const { data: regRows, error: regError } = await supabase
       .from('event_registrations')
       .select('user_id')
-      .eq('event_id', eventData.id)
+      .eq('event_id', eventId)
       .eq('status', 'approved')
       .limit(12)
 

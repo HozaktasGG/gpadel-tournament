@@ -187,7 +187,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
       const res = await fetch('/api/tournament/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, eventId }),
       })
       const data = await res.json()
       if (!res.ok) {
