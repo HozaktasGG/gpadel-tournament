@@ -55,6 +55,8 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [busyMatchId, setBusyMatchId] = useState('')
+  const [resetDialogOpen, setResetDialogOpen] = useState(false)
+  const [resetConfirmText, setResetConfirmText] = useState('')
 
   const loadAll = useCallback(async () => {
     const [teamsRes, groupsRes, matchesRes] = await Promise.all([
@@ -235,7 +237,7 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
   }
 
   const handleReset = async () => {
-    if (!confirm('Reset team tournament? Groups, matches, and scores will be deleted.')) return
+    if (resetConfirmText !== 'RESET') return
     setBusy(true)
     try {
       const res = await fetch('/api/team-tournament/reset', {
@@ -249,12 +251,20 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
         return
       }
       setScoreInputs({})
+      setResetDialogOpen(false)
+      setResetConfirmText('')
       await loadAll()
     } catch (err) {
       alert('Network error: ' + (err instanceof Error ? err.message : String(err)))
     } finally {
       setBusy(false)
     }
+  }
+
+  const closeResetDialog = () => {
+    if (busy) return
+    setResetDialogOpen(false)
+    setResetConfirmText('')
   }
 
   type Standing = {
@@ -306,7 +316,7 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
         {(groups.length > 0 || matches.length > 0) && (
           <button
             type="button"
-            onClick={handleReset}
+            onClick={() => setResetDialogOpen(true)}
             disabled={busy}
             className="text-xs font-bold px-4 py-2 rounded disabled:opacity-50"
             style={{ backgroundColor: '#ef4444', color: '#fff' }}
@@ -315,6 +325,61 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
           </button>
         )}
       </div>
+
+      {resetDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+          onClick={closeResetDialog}
+        >
+          <div
+            className="w-full max-w-md rounded-xl p-6"
+            style={{ backgroundColor: '#0f2318', border: '1px solid #ef4444' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-white mb-3">⚠️ WARNING</h3>
+            <p className="text-sm text-white/90 mb-2">
+              This will delete all groups, matches and scores for this tournament.
+            </p>
+            <p className="text-sm font-bold text-red-400 mb-4">
+              This cannot be undone.
+            </p>
+            <p className="text-sm text-white/80 mb-2">
+              Type <span className="font-mono font-bold text-white">RESET</span> to confirm:
+            </p>
+            <input
+              type="text"
+              value={resetConfirmText}
+              onChange={e => setResetConfirmText(e.target.value)}
+              autoFocus
+              disabled={busy}
+              className="w-full px-3 py-2 rounded text-sm font-mono mb-4"
+              style={{ backgroundColor: '#1a3d2e', color: '#fff', border: '1px solid #2d5a40' }}
+              placeholder="RESET"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={closeResetDialog}
+                disabled={busy}
+                className="text-xs font-bold px-4 py-2 rounded disabled:opacity-50"
+                style={{ backgroundColor: '#2d5a40', color: '#fff' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleReset}
+                disabled={busy || resetConfirmText !== 'RESET'}
+                className="text-xs font-bold px-4 py-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: '#ef4444', color: '#fff' }}
+              >
+                {busy ? 'Resetting...' : 'Confirm Reset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mb-6 rounded-xl p-5" style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}>
         <p className="text-[11px] tracking-[0.25em] uppercase text-white/60">Team Tournament</p>
