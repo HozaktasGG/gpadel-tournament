@@ -259,6 +259,30 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
     }
   }
 
+  const handleReset = async () => {
+    if (!confirm('Reset tournament? This will delete the schedule, all scores, and finals.')) return
+    if (!confirm('Are you sure? This cannot be undone.')) return
+    setBusy(true)
+    try {
+      const res = await fetch('/api/team-tournament/reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password, eventId }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert('ERROR: ' + (data.error ?? JSON.stringify(data)))
+        return
+      }
+      setScoreInputs({})
+      await loadAll()
+    } catch (err) {
+      alert('Network error: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (!loaded) {
     return <div className="text-sm text-white/70 py-10 text-center">Loading...</div>
   }
@@ -273,6 +297,17 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
         >
           ← Back to events
         </button>
+        {matches.length > 0 && (
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={busy}
+            className="text-xs font-bold px-3 py-1.5 rounded disabled:opacity-50"
+            style={{ backgroundColor: '#ef4444', color: '#fff' }}
+          >
+            Reset
+          </button>
+        )}
       </div>
 
       <div className="mb-6 rounded-xl p-5" style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}>
