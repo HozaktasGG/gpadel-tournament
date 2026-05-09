@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-client'
 import { useAdmin } from '../admin-provider'
 import AmericanoManager from './americano-manager'
 import TeamManager from './team-manager'
+import TeamAmericanoManager from './team-americano-manager'
 
 type EventRow = {
   id: string
@@ -42,6 +43,17 @@ export default function AdminTournamentPage() {
   }, [password, supabase])
 
   if (selected) {
+    if (selected.format === 'Team Americano') {
+      return (
+        <main className="min-h-screen p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
+          <TeamAmericanoManager
+            eventId={selected.id}
+            eventName={selected.name}
+            onBack={() => setSelected(null)}
+          />
+        </main>
+      )
+    }
     if (selected.format === 'Team') {
       return (
         <main className="min-h-screen p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
@@ -82,6 +94,13 @@ export default function AdminTournamentPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {events.map(ev => {
               const isTeam = ev.format === 'Team'
+              const isTeamAmericano = ev.format === 'Team Americano'
+              const badgeStyle = isTeamAmericano
+                ? { backgroundColor: 'rgba(34,197,94,0.15)', color: '#4ade80' }
+                : isTeam
+                ? { backgroundColor: 'rgba(255,107,53,0.15)', color: '#ff6b35' }
+                : { backgroundColor: 'rgba(59,130,246,0.15)', color: '#3b82f6' }
+              const badgeLabel = isTeamAmericano ? 'Team Americano' : isTeam ? 'Team' : 'Americano'
               return (
                 <div
                   key={ev.id}
@@ -92,13 +111,9 @@ export default function AdminTournamentPage() {
                     <h3 className="text-base font-bold text-white leading-snug">{ev.name}</h3>
                     <span
                       className="text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-full whitespace-nowrap"
-                      style={
-                        isTeam
-                          ? { backgroundColor: 'rgba(255,107,53,0.15)', color: '#ff6b35' }
-                          : { backgroundColor: 'rgba(59,130,246,0.15)', color: '#3b82f6' }
-                      }
+                      style={badgeStyle}
                     >
-                      {isTeam ? 'Team' : 'Americano'}
+                      {badgeLabel}
                     </span>
                   </div>
                   <p className="text-xs text-white/60 mb-1">📅 {ev.date}{ev.time ? ` · ${ev.time}` : ''}</p>
