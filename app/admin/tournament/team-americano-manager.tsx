@@ -279,7 +279,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
         <p className="text-[11px] tracking-[0.25em] uppercase text-white/60">Team Americano</p>
         <p className="text-2xl font-bold mt-1 text-white">{eventName}</p>
         <p className="text-xs text-white/60 mt-1">
-          {teams.length} approved team{teams.length === 1 ? '' : 's'} · 3 rounds + finals · 3 courts
+          {teams.length} approved team{teams.length === 1 ? '' : 's'} · 3 rounds + finals · 4 courts
         </p>
       </div>
 
@@ -371,7 +371,6 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
                       const input = scoreInputs[m.id] ?? { t1: '', t2: '' }
                       const scored = m.team1_score !== null && m.team2_score !== null
                       const slot = m.match_order ?? 0
-                      const slotLabel = slot <= 3 ? `Court ${slot}` : 'Waiting'
                       return (
                         <div
                           key={m.id}
@@ -381,9 +380,9 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
                           <div className="flex items-center justify-between mb-2">
                             <p
                               className="text-[10px] font-bold uppercase tracking-wider"
-                              style={{ color: slot <= 3 ? '#ff6b35' : '#9ca3af' }}
+                              style={{ color: '#ff6b35' }}
                             >
-                              Match {slot} · {slotLabel}
+                              Court {slot}
                             </p>
                             {scored && (
                               <span className="text-[9px] font-bold text-green-300 uppercase tracking-widest">
