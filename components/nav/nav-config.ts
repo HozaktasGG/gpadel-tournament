@@ -5,3 +5,8 @@ export function isActive(pathname: string, prefixes: string[]) {
 
 /** Routes where the mobile bottom nav is hidden (full-screen auth flows). */
 export const HIDE_BOTTOM_NAV = ['/signin', '/signup', '/auth', '/register', '/verify', '/ticket', '/cancel']
+
+/** Full-bleed pages with their own back/share controls and sticky action bar on phones. */
+export function hidesMobileChrome(pathname: string) {
+  return /^\/tournaments\/[^/]+\/?$/.test(pathname)
+}

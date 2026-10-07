@@ -20,6 +20,7 @@ import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FadeUpItem, FlipNumber, Stagger } from '@/components/motion'
 import { AddToCalendarButton, ShareEventButton } from '@/components/event-actions'
+import { PartnerSheet } from '@/app/tournaments/[id]/partner-sheet'
 
 // Placeholder names only to exercise layouts; no real data.
 const sample = ['Player One', 'Player Two', 'Player Three', 'Player Four']
@@ -37,6 +38,7 @@ export function UiKit() {
   const [sheet, setSheet] = useState(false)
   const [score, setScore] = useState(14)
   const [on, setOn] = useState(true)
+  const [partnerOpen, setPartnerOpen] = useState(false)
 
   return (
     <main className="mx-auto w-full max-w-[1200px] space-y-10 px-4 py-8 md:px-8">
@@ -140,6 +142,7 @@ export function UiKit() {
         <Section title="Overlays + toast + score flip">
           <div className="flex flex-wrap gap-3">
             <Button onClick={() => setSheet(true)}>Open bottom sheet</Button>
+            <Button variant="secondary" onClick={() => setPartnerOpen(true)}>Partner sheet</Button>
             <Dialog>
               <DialogTrigger asChild><Button variant="secondary">Open dialog</Button></DialogTrigger>
               <DialogContent>
@@ -188,6 +191,7 @@ export function UiKit() {
         </Section>
       </div>
 
+      <PartnerSheet open={partnerOpen} onOpenChange={setPartnerOpen} eventId="ui-kit" eventName="Sample team event" me={{ id: "me", first_name: "Player", last_name: "One", skill_level: "Intermediate", skill_score: 1240, avatar_url: null }} onSuccess={() => setPartnerOpen(false)} />
       <BottomSheet
         open={sheet}
         onOpenChange={setSheet}

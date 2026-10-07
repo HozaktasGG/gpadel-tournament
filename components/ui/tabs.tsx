@@ -31,7 +31,7 @@ TabsList.displayName = 'TabsList'
 export const tabTriggerClass = (variant: TabsVariant) =>
   variant === 'underline'
     ? cn(
-        'relative inline-flex h-11 min-w-[44px] shrink-0 items-center justify-center px-4 text-[15px] font-medium text-muted-foreground transition-colors',
+        'relative inline-flex h-11 min-w-[44px] shrink-0 items-center justify-center rounded-lg px-4 text-[15px] font-medium text-muted-foreground transition-colors focus-visible:outline-offset-[-3px]',
         'hover:text-foreground data-[state=active]:text-foreground',
         'after:absolute after:inset-x-2 after:-bottom-px after:h-[3px] after:rounded-full after:bg-primary after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100'
       )

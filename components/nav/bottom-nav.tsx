@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { BarChart3, CalendarDays, Search, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { LiveDot } from '@/components/ui/live-dot'
-import { HIDE_BOTTOM_NAV, isActive } from './nav-config'
+import { HIDE_BOTTOM_NAV, hidesMobileChrome, isActive } from './nav-config'
 import { useSessionProfile } from './session-context'
 
 const items = [
@@ -19,7 +19,7 @@ const items = [
 export function BottomNav() {
   const pathname = usePathname() ?? '/'
   const { hasLiveTournament } = useSessionProfile()
-  if (isActive(pathname, HIDE_BOTTOM_NAV)) return null
+  if (isActive(pathname, HIDE_BOTTOM_NAV) || hidesMobileChrome(pathname)) return null
 
   return (
     <nav
@@ -56,6 +56,6 @@ export function BottomNav() {
 /** Spacer so page content and footers clear the fixed bottom nav on phones. */
 export function BottomNavSpacer() {
   const pathname = usePathname() ?? '/'
-  if (isActive(pathname, HIDE_BOTTOM_NAV)) return null
+  if (isActive(pathname, HIDE_BOTTOM_NAV) || hidesMobileChrome(pathname)) return null
   return <div aria-hidden className="h-[calc(var(--bottom-nav-h)+env(safe-area-inset-bottom))] shrink-0 md:hidden" />
 }

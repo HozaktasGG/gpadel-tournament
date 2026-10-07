@@ -16,7 +16,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useSessionProfile } from './session-context'
-import { isActive } from './nav-config'
+import { hidesMobileChrome, isActive } from './nav-config'
 
 export function Logo({ className }: { className?: string }) {
   return (
@@ -43,7 +43,8 @@ export function SiteHeader() {
       className={cn(
         'sticky top-0 z-40 border-b border-border bg-pitch-900/85 pt-safe backdrop-blur-md supports-[backdrop-filter]:bg-pitch-900/70',
         // The admin workspace has its own sidebar on desktop.
-        inAdmin && 'lg:hidden'
+        inAdmin && 'lg:hidden',
+        hidesMobileChrome(pathname) && 'max-md:hidden'
       )}
     >
       <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-4 px-4 md:h-[72px] md:px-8">

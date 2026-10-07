@@ -5,6 +5,7 @@ import Footer from '@/components/Footer'
 import { SiteHeader } from '@/components/nav/site-header'
 import { BottomNav, BottomNavSpacer } from '@/components/nav/bottom-nav'
 import { SessionProvider } from '@/components/nav/session-context'
+import { MobileChromeGate } from '@/components/nav/mobile-chrome-gate'
 import { MotionProvider } from '@/components/motion'
 import { Toaster } from '@/components/ui/sonner'
 import { AddToHomeHint } from '@/components/add-to-home-hint'
@@ -74,7 +75,9 @@ export default function RootLayout({
           <SessionProvider>
             <SiteHeader />
             <div className="flex flex-1 flex-col">{children}</div>
-            <Footer />
+            <MobileChromeGate>
+              <Footer />
+            </MobileChromeGate>
             <BottomNavSpacer />
             <BottomNav />
             <AddToHomeHint />
