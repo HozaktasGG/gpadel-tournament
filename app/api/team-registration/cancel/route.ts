@@ -42,7 +42,7 @@ export async function DELETE(req: NextRequest) {
   if (!isCaptain) {
     const { data: profile } = await supabaseAdmin
       .from('profiles')
-      .select('is_admin')
+      .select('is_admin, player_code')
       .eq('id', user.id)
       .maybeSingle<{ is_admin: boolean | null }>()
     isAdmin = !!profile?.is_admin

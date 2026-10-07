@@ -77,7 +77,7 @@ export default function LeaderboardPage() {
       const [{ data: profiles }, { data: regs }] = await Promise.all([
         supabase
           .from('profiles')
-          .select('id, first_name, last_name, email, skill_score, last_score_change')
+          .select('id, first_name, last_name, email, skill_score, last_score_change, player_code')
           .not('skill_score', 'is', null)
           .gt('skill_score', 0),
         supabase

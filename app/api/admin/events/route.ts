@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { adminGuard } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-
-function checkPassword(body: { password?: string }) {
-  return body.password === process.env.ADMIN_PASSWORD
-}
 
 type EventInput = {
   name: string
@@ -38,9 +35,8 @@ function sanitizeEvent(raw: any): Partial<EventInput> {
 // POST: list events OR create (with action field)
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  if (!checkPassword(body)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
 
   if (body.action === 'create') {
     const payload = sanitizeEvent(body.event)
@@ -72,9 +68,8 @@ export async function POST(req: NextRequest) {
 // PUT: update event
 export async function PUT(req: NextRequest) {
   const body = await req.json()
-  if (!checkPassword(body)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
   if (!body.id) {
     return NextResponse.json({ error: 'Missing id.' }, { status: 400 })
   }
@@ -94,9 +89,8 @@ export async function PUT(req: NextRequest) {
 // DELETE: delete event
 export async function DELETE(req: NextRequest) {
   const body = await req.json()
-  if (!checkPassword(body)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
   if (!body.id) {
     return NextResponse.json({ error: 'Missing id.' }, { status: 400 })
   }

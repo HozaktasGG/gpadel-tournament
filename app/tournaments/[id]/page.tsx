@@ -17,6 +17,7 @@ type EventRow = {
   description: string | null
   pdf_url: string | null
   image_url: string | null
+  registration_open: boolean | null
 }
 
 type Profile = {
@@ -157,7 +158,8 @@ export default async function TournamentDetailPage({
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isTeamFormat = ev.format === 'Team'
+  const isTeamFormat = ev.format === 'Team' || ev.format === 'Team Americano'
+  const registrationOpen = ev.registration_open !== false
 
   let isRegistered = false
   let registrationId: string | null = null
@@ -189,7 +191,7 @@ export default async function TournamentDetailPage({
       if (playerIds.length > 0) {
         const { data: profileRows } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, avatar_url, skill_score, skill_level')
+          .select('id, first_name, last_name, avatar_url, skill_score, skill_level, player_code')
           .in('id', playerIds)
         teamPlayerProfiles = new Map(
           ((profileRows ?? []) as Profile[]).map(p => [p.id, p])
@@ -228,7 +230,7 @@ export default async function TournamentDetailPage({
         const userIds = regRows.map(r => r.user_id)
         const { data: profileRows, error: profileError } = await supabase
           .from('profiles')
-          .select('id, first_name, last_name, avatar_url, skill_score, skill_level')
+          .select('id, first_name, last_name, avatar_url, skill_score, skill_level, player_code')
           .in('id', userIds)
 
         if (profileError) {
@@ -809,11 +811,12 @@ export default async function TournamentDetailPage({
                   <Link href="/signup" className="underline">Sign up free</Link>
                 </p>
               </div>
-            ) : ev.format === 'Team' ? (
+            ) : isTeamFormat ? (
               <TeamRegisterSection
                 eventId={ev.id}
                 eventName={ev.name}
                 userId={user.id}
+                registrationOpen={registrationOpen}
                 initialRegistration={await loadInitialTeamRegistration(supabase, ev.id, user.id)}
               />
             ) : (
@@ -823,6 +826,7 @@ export default async function TournamentDetailPage({
                   isRegistered={isRegistered}
                   registrationId={registrationId}
                   isFull={isFull}
+                  registrationOpen={registrationOpen}
                 />
               </div>
             )}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { adminGuard } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 type MatchRow = {
@@ -9,15 +10,14 @@ type MatchRow = {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { password?: string; eventId?: string }
+  let body: { eventId?: string }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
-  if (body.password !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
   const eventId = body.eventId?.trim()
   if (!eventId) {
     return NextResponse.json({ error: 'Missing eventId.' }, { status: 400 })

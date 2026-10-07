@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await supabaseAdmin
     .from('profiles')
-    .select('is_admin')
+    .select('is_admin, player_code')
     .eq('id', user.id)
     .maybeSingle<{ is_admin: boolean | null }>()
 
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle<EventRow>(),
     supabaseAdmin
       .from('profiles')
-      .select('id, first_name, last_name, email')
+      .select('id, first_name, last_name, email, player_code')
       .in('id', memberIds),
   ])
 

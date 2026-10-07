@@ -38,12 +38,15 @@ export async function POST(req: NextRequest) {
 
   const { data: eventData } = await supabaseAdmin
     .from('events')
-    .select('id')
+    .select('id, registration_open')
     .eq('id', event_id)
-    .maybeSingle<{ id: string }>()
+    .maybeSingle<{ id: string; registration_open: boolean | null }>()
 
   if (!eventData) {
     return NextResponse.json({ error: 'Event not found.' }, { status: 404 })
+  }
+  if (eventData.registration_open === false) {
+    return NextResponse.json({ error: 'Registrations are closed for this event.' }, { status: 403 })
   }
 
   const { data: partnerProfile } = await supabaseAdmin

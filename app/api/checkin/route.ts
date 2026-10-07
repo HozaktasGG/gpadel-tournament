@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { adminGuard } from '@/lib/admin-auth'
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin'
 
-function checkPassword(password?: string) {
-  return password === process.env.ADMIN_PASSWORD
-}
-
-// POST { password, id? } => if id given: check in that id; otherwise return full list
+// POST { id? } => if id given: check in that id; otherwise return full list
 export async function POST(req: NextRequest) {
   const body = await req.json()
 
-  if (!checkPassword(body.password)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
 
   const { id } = body
 

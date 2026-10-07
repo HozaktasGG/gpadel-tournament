@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { adminGuard } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-
-function checkPassword(body: { password?: string }) {
-  return body.password === process.env.ADMIN_PASSWORD
-}
 
 // POST: list all event registrations
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  if (!checkPassword(body)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
 
   const { data: regs, error } = await supabaseAdmin
     .from('event_registrations')
@@ -26,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const [{ data: events }, { data: profiles }] = await Promise.all([
     supabaseAdmin.from('events').select('id, name, date, time').in('id', eventIds),
-    supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone, skill_score, skill_level').in('id', userIds),
+    supabaseAdmin.from('profiles').select('id, first_name, last_name, email, phone, skill_score, skill_level, player_code').in('id', userIds),
   ])
 
   const eventMap = new Map((events ?? []).map(e => [e.id, e]))
@@ -53,9 +49,8 @@ export async function POST(req: NextRequest) {
 // PUT: approve
 export async function PUT(req: NextRequest) {
   const body = await req.json()
-  if (!checkPassword(body)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
 
   const { id } = body
   if (!id) return NextResponse.json({ error: 'Missing id.' }, { status: 400 })
@@ -72,9 +67,8 @@ export async function PUT(req: NextRequest) {
 // DELETE: reject
 export async function DELETE(req: NextRequest) {
   const body = await req.json()
-  if (!checkPassword(body)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
 
   const { id } = body
   if (!id) return NextResponse.json({ error: 'Missing id.' }, { status: 400 })

@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { useAdmin } from '../admin-provider'
 
 type Registration = {
   id: string
@@ -20,7 +19,6 @@ type ScanResult =
   | { kind: 'error'; message: string }
 
 export default function AdminScanPage() {
-  const { password } = useAdmin()
   const [list, setList] = useState<Registration[]>([])
   const [scanResult, setScanResult] = useState<ScanResult>({ kind: 'idle' })
   const [scanning, setScanning] = useState(false)
@@ -35,7 +33,7 @@ export default function AdminScanPage() {
     const res = await fetch('/api/checkin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({}),
     })
     const data = await res.json()
     if (res.ok) {
@@ -44,9 +42,9 @@ export default function AdminScanPage() {
   }
 
   useEffect(() => {
-    if (password) fetchList()
+    fetchList()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [password])
+  }, [])
 
   const parseQr = (raw: string): string | null => {
     try {
@@ -75,7 +73,7 @@ export default function AdminScanPage() {
       const res = await fetch('/api/checkin', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, id }),
+        body: JSON.stringify({ id }),
       })
       const data = await res.json()
 

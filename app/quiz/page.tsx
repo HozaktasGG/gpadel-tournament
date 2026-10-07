@@ -13,7 +13,7 @@ export default async function QuizPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('first_name, skill_score, quiz_completed_at')
+    .select('first_name, skill_score, quiz_completed_at, player_code')
     .eq('id', user.id)
     .maybeSingle()
 

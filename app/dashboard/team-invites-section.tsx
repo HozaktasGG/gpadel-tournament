@@ -136,7 +136,7 @@ export default function TeamInvitesSection({ userId }: Props) {
         profileIds.length
           ? supabase
               .from('profiles')
-              .select('id, first_name, last_name, avatar_url')
+              .select('id, first_name, last_name, avatar_url, player_code')
               .in('id', profileIds)
           : Promise.resolve({ data: [] as ProfileRow[] }),
       ])

@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('profiles')
-    .select('id, quiz_completed_at')
+    .select('id, quiz_completed_at, player_code')
     .eq('id', userId)
     .maybeSingle()
 

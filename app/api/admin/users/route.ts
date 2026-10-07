@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { adminGuard } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-
-function checkPassword(body: { password?: string }) {
-  return body.password === process.env.ADMIN_PASSWORD
-}
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  if (!checkPassword(body)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
 
   const [
     { data: { users: authUsers } },

@@ -17,6 +17,7 @@ type Props = {
   eventName: string
   userId: string
   initialRegistration?: TeamReg | null
+  registrationOpen?: boolean
 }
 
 export default function TeamRegisterSection({
@@ -24,6 +25,7 @@ export default function TeamRegisterSection({
   eventName,
   userId,
   initialRegistration = null,
+  registrationOpen = true,
 }: Props) {
   const supabase = createClient()
   const router = useRouter()
@@ -169,7 +171,7 @@ export default function TeamRegisterSection({
             </p>
           </div>
 
-          {registration.status === 'rejected' && (
+          {registration.status === 'rejected' && registrationOpen && (
             <button
               type="button"
               onClick={() => setModalOpen(true)}
@@ -190,6 +192,19 @@ export default function TeamRegisterSection({
           )}
         </div>
       </>
+    )
+  }
+
+  if (!registrationOpen) {
+    return (
+      <div className="mt-6">
+        <div
+        className="rounded-xl p-4 text-center"
+        style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+      >
+        <p className="text-sm font-semibold text-white/80">Registrations closed</p>
+      </div>
+      </div>
     )
   }
 

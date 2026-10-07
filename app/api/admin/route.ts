@@ -1,20 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { adminGuard } from '@/lib/admin-auth'
 import { supabaseAdmin as supabase } from '@/lib/supabase-admin'
 import { Resend } from 'resend'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
-function checkPassword(body: { password?: string }) {
-  return body.password === process.env.ADMIN_PASSWORD
-}
-
 // POST: şifre kontrolü + kayıtları listele
 export async function POST(req: NextRequest) {
   const body = await req.json()
 
-  if (!checkPassword(body)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
 
   const { data, error } = await supabase
     .from('tournament_registrations')
@@ -32,9 +28,8 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const body = await req.json()
 
-  if (!checkPassword(body)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
 
   const { id } = body
 
@@ -120,9 +115,8 @@ export async function PUT(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   const body = await req.json()
 
-  if (!checkPassword(body)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
 
   const { id } = body
 

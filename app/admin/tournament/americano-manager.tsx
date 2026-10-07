@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { useAdmin } from '../admin-provider'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -50,8 +49,6 @@ type Props = {
 }
 
 export default function AmericanoManager({ eventId, onBack }: Props) {
-  const { password } = useAdmin()
-  const authed = !!password
 
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [rounds, setRounds] = useState<DBRound[]>([])
@@ -126,14 +123,13 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
   }, [eventId])
 
   useEffect(() => {
-    if (!authed) return
     loadRegisteredCount()
     loadAll()
     pollRef.current = window.setInterval(loadAll, 5000)
     return () => {
       if (pollRef.current) window.clearInterval(pollRef.current)
     }
-  }, [authed, loadAll, loadRegisteredCount])
+  }, [loadAll, loadRegisteredCount])
 
   useEffect(() => {
     if (matches.length === 0) return
@@ -187,7 +183,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
       const res = await fetch('/api/tournament/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, eventId }),
+        body: JSON.stringify({ eventId }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -219,7 +215,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
       const res = await fetch('/api/tournament/save-score', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, matchId, team1Score: t1, team2Score: t2 }),
+        body: JSON.stringify({ matchId, team1Score: t1, team2Score: t2 }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -246,7 +242,6 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          password,
           tournamentId: tournament.id,
           roundNumber: tournament.current_round,
         }),
@@ -271,7 +266,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
       const res = await fetch('/api/tournament/reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({}),
       })
       const data = await res.json()
       if (!res.ok) {

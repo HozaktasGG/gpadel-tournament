@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAdmin } from './admin-provider'
 import { getLevel, getLevelColor } from '@/lib/quiz-questions'
 import { createClient } from '@/lib/supabase-client'
 
@@ -120,7 +119,6 @@ const EMPTY_EVENT_FORM: EventFormData = {
 }
 
 export default function AdminPage() {
-  const { password } = useAdmin()
 
   const [users, setUsers] = useState<UserRow[]>([])
   const [usersLoading, setUsersLoading] = useState(true)
@@ -161,7 +159,7 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({}),
     })
     const data = await res.json()
     setUsersLoading(false)
@@ -173,7 +171,7 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/event-registrations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({}),
     })
     const data = await res.json()
     setEventRegsLoading(false)
@@ -185,7 +183,7 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({}),
     })
     const data = await res.json()
     setEventsLoading(false)
@@ -215,14 +213,12 @@ export default function AdminPage() {
   }
 
   useEffect(() => {
-    if (password) {
-      fetchUsers()
-      fetchEventRegs()
-      fetchEvents()
-      fetchTeamRegs()
-    }
+    fetchUsers()
+    fetchEventRegs()
+    fetchEvents()
+    fetchTeamRegs()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [password])
+  }, [])
 
   useEffect(() => {
     if (!selectedUser) {
@@ -263,7 +259,7 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/sync-users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({}),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -350,7 +346,6 @@ export default function AdminPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        password,
         action: 'create',
         event: {
           name: eventForm.name.trim(),
@@ -387,7 +382,6 @@ export default function AdminPage() {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        password,
         id: editingEvent.id,
         event: {
           name: editingEvent.name,
@@ -418,7 +412,7 @@ export default function AdminPage() {
     const res = await fetch('/api/admin/events', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, id }),
+      body: JSON.stringify({ id }),
     })
     const data = await res.json()
     setEventActionLoading(null)
@@ -434,7 +428,7 @@ export default function AdminPage() {
     await fetch('/api/admin/event-registrations', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, id }),
+      body: JSON.stringify({ id }),
     })
     await fetchEventRegs()
     setActionLoading(null)
@@ -445,7 +439,7 @@ export default function AdminPage() {
     await fetch('/api/admin/event-registrations', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password, id }),
+      body: JSON.stringify({ id }),
     })
     await fetchEventRegs()
     setActionLoading(null)
@@ -768,6 +762,13 @@ export default function AdminPage() {
                         <td className="py-3 pr-4 text-white/70">{ev.max_players ?? '—'}</td>
                         <td className="py-3">
                           <div className="flex gap-2">
+                            <a
+                              href={`/admin/events/${ev.id}`}
+                              className="px-3 py-1 rounded-lg text-xs font-bold text-white whitespace-nowrap"
+                              style={{ backgroundColor: '#ff6b35' }}
+                            >
+                              Manage
+                            </a>
                             <button
                               onClick={() => setEditingEvent({ ...ev })}
                               disabled={acting}

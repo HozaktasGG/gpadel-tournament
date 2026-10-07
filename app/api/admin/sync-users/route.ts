@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { adminGuard } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
 type ProfileRow = {
@@ -19,15 +20,14 @@ function splitName(raw: string): { first: string; last: string } {
 }
 
 export async function POST(req: NextRequest) {
-  let body: { password?: string }
+  let body: Record<string, unknown>
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid request.' }, { status: 400 })
   }
-  if (body.password !== process.env.ADMIN_PASSWORD) {
-    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 })
-  }
+  const denied = await adminGuard()
+  if (denied) return denied
 
   const allAuthUsers: { id: string; email: string | null; user_metadata: Record<string, unknown> | null }[] = []
   let page = 1
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   const { data: existingProfiles, error: profErr } = await supabaseAdmin
     .from('profiles')
-    .select('id, first_name')
+    .select('id, first_name, player_code')
 
   if (profErr) {
     return NextResponse.json({ error: 'Failed to load profiles: ' + profErr.message }, { status: 500 })

@@ -61,7 +61,7 @@ export default async function HomePage() {
       .limit(3),
     supabase
       .from('profiles')
-      .select('id, first_name, last_name, skill_score')
+      .select('id, first_name, last_name, skill_score, player_code')
       .not('skill_score', 'is', null)
       .gt('skill_score', 0)
       .order('skill_score', { ascending: false })

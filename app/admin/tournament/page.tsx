@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
-import { useAdmin } from '../admin-provider'
 import AmericanoManager from './americano-manager'
 import TeamManager from './team-manager'
 import TeamAmericanoManager from './team-americano-manager'
@@ -19,14 +18,12 @@ type EventRow = {
 }
 
 export default function AdminTournamentPage() {
-  const { password } = useAdmin()
   const supabase = createClient()
   const [events, setEvents] = useState<EventRow[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<EventRow | null>(null)
 
   useEffect(() => {
-    if (!password) return
     let cancelled = false
     const load = async () => {
       const { data } = await supabase
@@ -40,7 +37,7 @@ export default function AdminTournamentPage() {
     }
     load()
     return () => { cancelled = true }
-  }, [password, supabase])
+  }, [supabase])
 
   if (selected) {
     if (selected.format === 'Team Americano') {

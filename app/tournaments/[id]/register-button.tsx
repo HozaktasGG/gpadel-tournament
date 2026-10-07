@@ -9,11 +9,13 @@ export default function RegisterButton({
   isRegistered,
   registrationId,
   isFull,
+  registrationOpen = true,
 }: {
   eventId: string
   isRegistered: boolean
   registrationId: string | null
   isFull: boolean
+  registrationOpen?: boolean
 }) {
   const supabase = createClient()
   const router = useRouter()
@@ -92,6 +94,17 @@ export default function RegisterButton({
           {loading ? 'Cancelling...' : 'Cancel registration'}
         </button>
         {error && <p className="text-xs text-red-300 text-center">{error}</p>}
+      </div>
+    )
+  }
+
+  if (!registrationOpen) {
+    return (
+      <div
+        className="rounded-xl p-4 text-center"
+        style={{ backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}
+      >
+        <p className="text-sm font-semibold text-white/80">Registrations closed</p>
       </div>
     )
   }

@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
-import { useAdmin } from '../admin-provider'
 
 type Team = {
   id: string
@@ -42,7 +41,6 @@ const FINAL_LABELS: Record<number, { title: string; emoji: string }> = {
 }
 
 export default function TeamAmericanoManager({ eventId, eventName, onBack }: Props) {
-  const { password } = useAdmin()
   const supabase = createClient()
 
   const [teams, setTeams] = useState<Team[]>([])
@@ -79,7 +77,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
     if (playerIds.length > 0) {
       const { data } = await supabase
         .from('profiles')
-        .select('id, first_name, last_name')
+        .select('id, first_name, last_name, player_code')
         .in('id', playerIds)
       playerRows = (data ?? []) as Player[]
     }
@@ -186,7 +184,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
       const res = await fetch('/api/team-americano/generate-schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, eventId }),
+        body: JSON.stringify({ eventId }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -222,7 +220,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
       const res = await fetch('/api/team-tournament/save-match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, matchId, team1Score: t1, team2Score: t2 }),
+        body: JSON.stringify({ matchId, team1Score: t1, team2Score: t2 }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -244,7 +242,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
       const res = await fetch('/api/team-americano/generate-finals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, eventId }),
+        body: JSON.stringify({ eventId }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -267,7 +265,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
       const res = await fetch('/api/team-tournament/reset', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password, eventId }),
+        body: JSON.stringify({ eventId }),
       })
       const data = await res.json()
       if (!res.ok) {

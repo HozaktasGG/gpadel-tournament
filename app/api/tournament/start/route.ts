@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { adminGuard } from '@/lib/admin-auth'
 import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
@@ -7,11 +8,10 @@ const ZERO = '00000000-0000-0000-0000-000000000000'
 
 export async function POST(req: Request) {
   try {
-    const { password, eventId } = await req.json()
+    const { eventId } = await req.json()
 
-    if (password !== process.env.ADMIN_PASSWORD) {
-      return NextResponse.json({ error: 'Wrong password' }, { status: 401 })
-    }
+    const denied = await adminGuard()
+    if (denied) return denied
     if (!eventId || typeof eventId !== 'string') {
       return NextResponse.json({ error: 'Missing eventId' }, { status: 400 })
     }
@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     const userIds = regRows.map(r => r.user_id)
     const { data: profileRows, error: profileError } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name')
+      .select('id, first_name, last_name, player_code')
       .in('id', userIds)
 
     if (profileError || !profileRows) {

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { adminGuard } from '@/lib/admin-auth'
 import { createClient } from '@supabase/supabase-js'
 import { getLevel } from '@/lib/quiz-questions'
 
@@ -15,12 +16,11 @@ function bonusForRank(rank: number): number {
 
 export async function POST(req: Request) {
   try {
-    const { password, tournamentId, roundNumber } = await req.json()
+    const { tournamentId, roundNumber } = await req.json()
     console.log('END-ROUND:', { tournamentId, roundNumber })
 
-    if (password !== process.env.ADMIN_PASSWORD) {
-      return NextResponse.json({ error: 'Wrong password' }, { status: 401 })
-    }
+    const denied = await adminGuard()
+    if (denied) return denied
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -153,7 +153,7 @@ export async function POST(req: Request) {
           // Find profile and update skill_score
           let profileQuery = supabase
             .from('profiles')
-            .select('id, skill_score')
+            .select('id, skill_score, player_code')
             .ilike('first_name', firstName)
           if (lastName) profileQuery = profileQuery.ilike('last_name', lastName)
 

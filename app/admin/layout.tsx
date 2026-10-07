@@ -1,6 +1,5 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
-import AdminProvider from './admin-provider'
 
 export default async function AdminLayout({
   children,
@@ -16,7 +15,7 @@ export default async function AdminLayout({
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('is_admin')
+    .select('is_admin, player_code')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -24,9 +23,5 @@ export default async function AdminLayout({
     redirect('/signin?error=admin_required&redirect=/admin')
   }
 
-  return (
-    <AdminProvider password={process.env.ADMIN_PASSWORD ?? ''}>
-      {children}
-    </AdminProvider>
-  )
+  return <>{children}</>
 }
