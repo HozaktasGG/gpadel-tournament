@@ -108,3 +108,47 @@ export function knockoutRounds(matches: TeamMatch[]) {
     { key: 'final', label: 'Final', matches: by('final') },
   ].filter(r => r.matches.length > 0)
 }
+
+export type TeamPlacement = { label: string; rank: number | null }
+
+/**
+ * Where a team finished, using only recorded results (no estimates).
+ * Team: Champion / Runner-up from the final, otherwise the last knockout round reached, or group stage.
+ * Team Americano: placement from the scored placement finals.
+ */
+export function teamPlacement(format: string | null, teamId: string, matches: TeamMatch[]): TeamPlacement | null {
+  const mine = (m: TeamMatch) => m.team1_id === teamId || m.team2_id === teamId
+  if (format === 'Team Americano') {
+    const p = finalPlacements(matches.filter(m => m.phase === 'final')).find(x => x.team_id === teamId)
+    if (!p) return null
+    return { rank: p.rank, label: p.rank === 1 ? 'Champion' : `${ordinalSuffix(p.rank)} place` }
+  }
+  const final = matches.find(m => m.phase === 'final' && mine(m))
+  if (final && scored(final)) {
+    const won = (final.team1_id === teamId) === final.team1_score! > final.team2_score!
+    return won ? { rank: 1, label: 'Champion' } : { rank: 2, label: 'Runner-up' }
+  }
+  if (matches.some(m => m.phase === 'semi' && mine(m) && scored(m))) return { rank: null, label: 'Semi-finalist' }
+  if (matches.some(m => m.phase === 'quarter' && mine(m) && scored(m))) return { rank: null, label: 'Quarter-finalist' }
+  if (matches.some(m => m.phase === 'group' && mine(m) && scored(m))) return { rank: null, label: 'Group stage' }
+  return null
+}
+
+/** Wins / played over all scored matches of a team. */
+export function teamRecord(teamId: string, matches: TeamMatch[]) {
+  let played = 0
+  let wins = 0
+  for (const m of matches) {
+    if (!scored(m) || (m.team1_id !== teamId && m.team2_id !== teamId)) continue
+    played++
+    const t1 = m.team1_id === teamId
+    if ((t1 && m.team1_score! > m.team2_score!) || (!t1 && m.team2_score! > m.team1_score!)) wins++
+  }
+  return { played, wins }
+}
+
+function ordinalSuffix(n: number) {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}

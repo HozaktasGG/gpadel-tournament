@@ -1,14 +1,45 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Camera, ChevronRight, ClipboardList, Copy, Info, Loader2, LogOut, Shield, Trophy } from 'lucide-react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase-client'
-import { getLevel, getLevelColor } from '@/lib/quiz-questions'
-import ScoreHistory from './score-history'
+import { getLevel, QUIZ_QUESTIONS } from '@/lib/quiz-questions'
+import { SEASON_START } from '@/lib/config'
+import { formatEventDate } from '@/lib/event-status'
+import { isTeamFormat } from '@/lib/event-format'
+import { teamPlacement, teamRecord, type TeamMatch } from '@/lib/team-standings'
+import { cn } from '@/lib/utils'
+import { Avatar } from '@/components/ui/avatar'
+import { SkillBadge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState } from '@/components/ui/empty-state'
+import { FadeUpItem, Stagger } from '@/components/motion'
+import { useSessionProfile } from '@/components/nav/session-context'
+import { RatingChart, type ScoreRow } from './rating-chart'
+
+type EventLite = { id: string; name: string; date: string; location: string | null; format: string | null; status: string | null }
+type PastEvent = EventLite & { teamId: string | null }
+type Result = PastEvent & { placement: { label: string; rank: number | null } | null }
+
+const unwrap = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v)
+const isQuiz = (reason: string | null) => !!reason && /quiz/i.test(reason)
+
+function todayString() {
+  const d = new Date()
+  d.setHours(0, 0, 0, 0)
+  return d.toISOString().split('T')[0]
+}
 
 export default function ProfilePage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
+  const { isAdmin, signOut } = useSessionProfile()
 
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
@@ -22,7 +53,6 @@ export default function ProfilePage() {
   // Only send phone on save if we could load it (avoids wiping it on RPC failure).
   const [phoneLoaded, setPhoneLoaded] = useState(false)
   const [playerCode, setPlayerCode] = useState<string | null>(null)
-  const [copiedCode, setCopiedCode] = useState(false)
 
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarMsg, setAvatarMsg] = useState('')
@@ -34,6 +64,11 @@ export default function ProfilePage() {
   const [newPassword, setNewPassword] = useState('')
   const [savingPassword, setSavingPassword] = useState(false)
   const [passwordMsg, setPasswordMsg] = useState('')
+
+  // Progress data (read-only).
+  const [history, setHistory] = useState<ScoreRow[] | null>(null)
+  const [results, setResults] = useState<Result[] | null>(null)
+  const [teamStats, setTeamStats] = useState<{ podiums: number; wins: number; played: number; events: number } | null>(null)
 
   useEffect(() => {
     const load = async () => {
@@ -67,6 +102,63 @@ export default function ProfilePage() {
         setPhoneLoaded(true)
       }
       setLoading(false)
+
+      // --- progress (rating history, past events, team results) ---
+      const [hist, solo, teams] = await Promise.all([
+        supabase.from('score_history').select('id, score, change, reason, created_at').eq('user_id', user.id).order('created_at', { ascending: true }),
+        supabase
+          .from('event_registrations')
+          .select('event_id, events(id, name, date, location, format, status)')
+          .eq('user_id', user.id)
+          .eq('status', 'approved'),
+        supabase
+          .from('team_registrations')
+          .select('id, event_id, events(id, name, date, location, format, status)')
+          .or(`captain_id.eq.${user.id},partner_id.eq.${user.id}`)
+          .eq('status', 'approved'),
+      ])
+      setHistory((hist.data ?? []) as ScoreRow[])
+
+      const today = todayString()
+      const past: PastEvent[] = []
+      for (const r of (solo.data ?? []) as unknown as { events: EventLite | EventLite[] | null }[]) {
+        const ev = unwrap(r.events)
+        if (ev && ev.date < today) past.push({ ...ev, teamId: null })
+      }
+      for (const r of (teams.data ?? []) as unknown as { id: string; events: EventLite | EventLite[] | null }[]) {
+        const ev = unwrap(r.events)
+        if (ev && ev.date < today && !past.some(p => p.id === ev.id)) past.push({ ...ev, teamId: r.id })
+      }
+      past.sort((a, b) => (a.date < b.date ? 1 : -1))
+
+      // Team events: placements + record from recorded matches only.
+      const teamEvents = past.filter(p => p.teamId && isTeamFormat(p.format))
+      let matches: TeamMatch[] = []
+      if (teamEvents.length) {
+        const { data: m } = await supabase
+          .from('team_tournament_matches')
+          .select('id, phase, group_name, round_number, team1_id, team2_id, team1_score, team2_score, winner_id, match_order, event_id')
+          .in('event_id', teamEvents.map(t => t.id))
+        matches = (m ?? []) as TeamMatch[]
+      }
+      const byEvent = (id: string) => matches.filter(m => (m as TeamMatch & { event_id: string }).event_id === id)
+      let podiums = 0
+      let wins = 0
+      let played = 0
+      let counted = 0
+      const out: Result[] = past.map(p => {
+        if (!p.teamId || !isTeamFormat(p.format)) return { ...p, placement: null }
+        const ms = byEvent(p.id)
+        const placement = teamPlacement(p.format, p.teamId, ms)
+        const rec = teamRecord(p.teamId, ms)
+        if (rec.played > 0) counted++
+        wins += rec.wins
+        played += rec.played
+        if (placement?.rank && placement.rank <= (p.format === 'Team Americano' ? 3 : 2)) podiums++
+        return { ...p, placement }
+      })
+      setResults(out)
+      setTeamStats(counted > 0 ? { podiums, wins, played, events: counted } : null)
     }
     load()
   }, [router, supabase])
@@ -173,286 +265,255 @@ export default function ProfilePage() {
     setTimeout(() => setPasswordMsg(''), 3000)
   }
 
+  const copyCode = async () => {
+    if (!playerCode) return
+    try {
+      await navigator.clipboard.writeText(playerCode)
+      toast.success('Player code copied', { description: 'Share it with your partner to team up.' })
+    } catch {
+      toast.error("Couldn't copy", { description: playerCode })
+    }
+  }
+
   if (loading) {
     return (
-      <main className="flex-1 flex items-center justify-center" style={{ backgroundColor: '#1a3d2e' }}>
-        <p className="text-sm text-white/70">Loading...</p>
+      <main className="mx-auto w-full max-w-3xl flex-1 space-y-4 px-4 py-6" aria-busy="true">
+        <div className="flex items-center gap-4">
+          <Skeleton className="size-24 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-8 w-2/3" />
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-10 w-1/2" />
+          </div>
+        </div>
+        <Skeleton className="h-64 w-full rounded-2xl" />
       </main>
     )
   }
 
-  const level = quizCompleted && score != null ? getLevel(score) : null
-  const levelColor = level ? getLevelColor(level) : null
+  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim() || email
+  const level = quizCompleted && score != null ? getLevel(score) : 'Unranked'
+  const seasonDelta = (history ?? [])
+    .filter(r => r.created_at.slice(0, 10) >= SEASON_START && !isQuiz(r.reason))
+    .reduce((sum, r) => sum + (r.change ?? 0), 0)
 
   return (
-    <main
-      className="flex-1 py-10 px-4 sm:px-6"
-      style={{ backgroundColor: '#1a3d2e' }}
-    >
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-white">Profile</h1>
-        <p className="text-sm text-white/60 mt-1">Manage your account details.</p>
-
-        {/* Avatar */}
-        <section
-          className="mt-6 rounded-2xl p-6 flex items-center gap-5"
-          style={{
-            backgroundColor: '#0f2a1f',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}
+    <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-10 pt-5 md:pt-10">
+      {/* Identity */}
+      <section className="flex items-center gap-4 md:gap-6">
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploadingAvatar}
+          className="group relative shrink-0 rounded-full focus-visible:outline-offset-4"
+          aria-label="Change profile photo"
         >
-          <div className="relative flex-shrink-0">
-            {avatarUrl ? (
-              <img
-                src={avatarUrl}
-                alt="Avatar"
-                width={72}
-                height={72}
-                className="rounded-full object-cover"
-                style={{ width: 72, height: 72 }}
-              />
-            ) : (
-              <span
-                className="flex items-center justify-center rounded-full text-2xl font-bold text-white"
-                style={{ width: 72, height: 72, backgroundColor: '#ff6b35' }}
-              >
-                {(firstName?.[0] ?? email?.[0] ?? '?').toUpperCase()}
-              </span>
-            )}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-base font-bold text-white truncate">
-              {[firstName, lastName].filter(Boolean).join(' ') || email || 'Profile'}
-            </p>
-            {playerCode && (
-              <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                <span className="text-[#ff6b35] font-mono font-bold text-sm tracking-widest">
-                  {playerCode}
-                </span>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(playerCode)
-                      setCopiedCode(true)
-                      setTimeout(() => setCopiedCode(false), 2000)
-                    } catch {
-                      // Clipboard API unavailable
-                    }
-                  }}
-                  className="bg-[#1a3d2e] hover:bg-[#2d5a40] text-gray-300 hover:text-white px-2.5 py-1 rounded-md text-[11px] font-medium transition"
-                >
-                  {copiedCode ? '✓ Kopyalandı' : '📋 Kopyala'}
-                </button>
-              </div>
-            )}
-            {avatarMsg && (
-              <p
-                className={`text-xs mt-2 ${avatarMsg.includes('✓') ? 'text-green-300' : 'text-red-300'}`}
-              >
-                {avatarMsg}
-              </p>
-            )}
+          <Avatar src={avatarUrl} name={fullName} size="xl" className="md:size-28" />
+          <span className="absolute bottom-0 right-0 flex size-9 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground transition-transform group-active:scale-95">
+            {uploadingAvatar ? <Loader2 className="size-4 animate-spin" /> : <Camera className="size-4" />}
+          </span>
+        </button>
+        <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+        <div className="min-w-0 flex-1">
+          <h1 className="truncate font-display text-[34px] font-bold leading-none md:text-hero">{fullName}</h1>
+          {playerCode && (
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingAvatar}
-              className="mt-3 px-4 py-2 rounded-full text-xs font-bold text-white transition disabled:opacity-50"
-              style={{ backgroundColor: '#ff6b35' }}
+              onClick={copyCode}
+              className="mt-1 inline-flex min-h-9 items-center gap-1.5 text-[15px] tracking-wide text-muted-foreground hover:text-foreground"
+              aria-label={`Copy player code ${playerCode}`}
             >
-              {uploadingAvatar
-                ? 'Uploading...'
-                : avatarUrl
-                  ? 'Change photo'
-                  : 'Upload photo'}
+              {playerCode}
+              <Copy className="size-4" aria-hidden />
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleAvatarChange}
-              className="hidden"
-            />
-          </div>
-        </section>
-
-        {/* Quiz card */}
-        <div
-          className="mt-6 rounded-2xl p-5 flex items-center gap-4"
-          style={{
-            backgroundColor: '#0f2a1f',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}
-        >
-          <div className="flex-1">
-            <p className="text-xs text-white/50 font-semibold tracking-wide uppercase">
-              Skill Assessment
-            </p>
-            {quizCompleted && level && levelColor ? (
-              <div className="mt-1.5 flex items-baseline gap-3">
-                <p className="text-2xl font-bold text-white leading-none">
-                  {score}
-                  <span className="text-xs text-white/40 font-semibold ml-1">pts</span>
-                </p>
-                <span
-                  className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold"
-                  style={{ background: levelColor.bg, color: levelColor.text }}
-                >
-                  {levelColor.icon && <span>{levelColor.icon}</span>}
-                  <span>{level}</span>
-                </span>
-              </div>
-            ) : (
-              <p className="text-sm text-white/75 mt-1">
-                You haven't taken the quiz yet.
-              </p>
-            )}
+          )}
+          <div className="mt-1.5">
+            <SkillBadge level={level} variant="solid" size="md" />
           </div>
         </div>
+      </section>
+      {avatarMsg && <p className="mt-2 text-sm text-muted-foreground" role="status">{avatarMsg}</p>}
 
-        {/* Score history */}
-        {userId && <ScoreHistory userId={userId} />}
-
-        {/* Edit profile */}
-        <section
-          className="mt-6 rounded-2xl p-6"
-          style={{
-            backgroundColor: '#0f2a1f',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}
-        >
-          <h2 className="text-lg font-bold text-white mb-4">
-            Personal information
-          </h2>
-          <form onSubmit={saveProfile} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-white/70 mb-1.5">
-                  First name
-                </label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={e => setFirstName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white outline-none"
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-white/70 mb-1.5">
-                  Last name
-                </label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={e => setLastName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white outline-none"
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                  }}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1.5">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                disabled
-                className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white/60 outline-none"
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.02)',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                }}
-              />
-              <p className="text-[11px] text-white/40 mt-1">
-                Email can't be changed here.
-              </p>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1.5">
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
-                placeholder="+39 123 456 7890"
-                className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white outline-none"
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-              />
-            </div>
-            {profileMsg && (
-              <p className={`text-xs ${profileMsg.includes('✓') ? 'text-green-300' : 'text-red-300'}`}>
-                {profileMsg}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={savingProfile}
-              className="w-full py-3 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
-              style={{ backgroundColor: '#ff6b35' }}
-            >
-              {savingProfile ? 'Saving...' : 'Save changes'}
-            </button>
-          </form>
-        </section>
-
-        {/* Change password */}
-        <section
-          className="mt-6 rounded-2xl p-6"
-          style={{
-            backgroundColor: '#0f2a1f',
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}
-        >
-          <h2 className="text-lg font-bold text-white mb-4">Change password</h2>
-          <form onSubmit={changePassword} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-white/70 mb-1.5">
-                New password
-              </label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={e => setNewPassword(e.target.value)}
-                minLength={6}
-                placeholder="At least 6 characters"
-                className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white outline-none"
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                }}
-              />
-            </div>
-            {passwordMsg && (
-              <p className={`text-xs ${passwordMsg.includes('✓') ? 'text-green-300' : 'text-red-300'}`}>
-                {passwordMsg}
-              </p>
-            )}
-            <button
-              type="submit"
-              disabled={savingPassword || !newPassword}
-              className="w-full py-3 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.08)',
-                border: '1px solid rgba(255,255,255,0.15)',
-              }}
-            >
-              {savingPassword ? 'Updating...' : 'Update password'}
-            </button>
-          </form>
-        </section>
+      <div className="mt-4 flex items-end gap-3">
+        <p className="font-display text-rating font-bold tabular">{quizCompleted && score != null ? score : '—'}</p>
+        {seasonDelta !== 0 && (
+          <p className={cn('mb-1.5 font-display text-xl font-semibold', seasonDelta > 0 ? 'text-success' : 'text-destructive')}>
+            {seasonDelta > 0 ? `+${seasonDelta}` : seasonDelta} <span className="text-base font-medium text-muted-foreground">this season</span>
+          </p>
+        )}
       </div>
+
+      <Stagger className="mt-6 space-y-4">
+        {/* Rating chart + stats */}
+        <FadeUpItem>
+          <Card className="p-4 md:p-5">
+            {history === null ? <Skeleton className="h-64 w-full" /> : <RatingChart rows={history} />}
+            <dl className={cn('mt-4 grid divide-x divide-border rounded-xl border border-border', teamStats ? 'grid-cols-3' : 'grid-cols-1')}>
+              <Stat label="Tournaments" value={results ? String(results.length) : '—'} />
+              {teamStats && <Stat label="Podiums" sub="team events" value={String(teamStats.podiums)} />}
+              {teamStats && (
+                <Stat label="Win rate" sub="team events" value={teamStats.played ? `${Math.round((teamStats.wins / teamStats.played) * 100)}%` : '—'} />
+              )}
+            </dl>
+          </Card>
+        </FadeUpItem>
+
+        {/* Recent results */}
+        <FadeUpItem>
+          <Card className="p-4 md:p-5">
+            <h2 className="mb-3 font-display text-2xl font-semibold">Recent results</h2>
+            {results === null ? (
+              <Skeleton className="h-20 w-full" />
+            ) : results.length === 0 ? (
+              <EmptyState icon={Trophy} title="No tournaments played yet" description="Your results show up here after your first event." />
+            ) : (
+              <ul className="space-y-2">
+                {results.slice(0, 5).map(r => (
+                  <li key={r.id}>
+                    <Link
+                      href={`/tournaments/${r.id}`}
+                      className="flex min-h-[64px] items-center gap-3 rounded-xl border border-border bg-pitch-850 p-3 transition-colors active:bg-pitch-800"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-display text-lg font-semibold leading-tight">{r.name}</p>
+                        <p className="truncate text-sm text-muted-foreground">
+                          {[r.format ?? 'Americano', r.location, formatEventDate(r.date, 'short')].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      {r.placement && (
+                        <span
+                          className={cn(
+                            'shrink-0 text-right font-display text-lg font-semibold leading-tight',
+                            r.placement.rank === 1 ? 'text-medal-gold' : r.placement.rank === 2 ? 'text-medal-silver' : r.placement.rank === 3 ? 'text-medal-bronze' : 'text-foreground'
+                          )}
+                        >
+                          {r.placement.label}
+                        </span>
+                      )}
+                      <ChevronRight className="size-5 shrink-0 text-subtle" aria-hidden />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+        </FadeUpItem>
+
+        {/* Skill levels + quiz */}
+        <FadeUpItem>
+          <Card className="p-4 md:p-5">
+            <h2 className="mb-3 font-display text-2xl font-semibold">Player skill levels</h2>
+            <div className="flex flex-wrap gap-2">
+              {['Unranked', 'Beginner', 'Intermediate', 'Advanced'].map(l => (
+                <SkillBadge key={l} level={l} variant="solid" size="md" dot className={cn(l !== level && 'opacity-55')} />
+              ))}
+            </div>
+            {!quizCompleted && (
+              <Link
+                href="/quiz"
+                className="mt-4 flex min-h-[64px] items-center gap-3 rounded-xl border border-border bg-pitch-850 p-3 transition-colors active:bg-pitch-800"
+              >
+                <ClipboardList className="size-6 shrink-0 text-muted-foreground" aria-hidden />
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-lg font-semibold leading-tight">New to SmashTorino?</p>
+                  <p className="text-sm text-muted-foreground">Take the {QUIZ_QUESTIONS.length}-question skill quiz</p>
+                </div>
+                <ChevronRight className="size-5 shrink-0 text-subtle" aria-hidden />
+              </Link>
+            )}
+          </Card>
+        </FadeUpItem>
+
+        {/* Account */}
+        <FadeUpItem>
+          <Card className="p-4 md:p-5">
+            <h2 className="mb-4 font-display text-2xl font-semibold">Account</h2>
+            <form onSubmit={saveProfile} className="space-y-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="First name" htmlFor="first-name">
+                  <Input id="first-name" value={firstName} onChange={e => setFirstName(e.target.value)} autoComplete="given-name" />
+                </Field>
+                <Field label="Last name" htmlFor="last-name">
+                  <Input id="last-name" value={lastName} onChange={e => setLastName(e.target.value)} autoComplete="family-name" />
+                </Field>
+              </div>
+              <Field label="Email" htmlFor="email">
+                <Input id="email" value={email} disabled readOnly />
+              </Field>
+              <Field label="Phone" htmlFor="phone" hint={phoneLoaded ? undefined : "Couldn't load your phone right now; it won't be changed."}>
+                <Input id="phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} disabled={!phoneLoaded} placeholder="+39 …" />
+              </Field>
+              <div className="flex items-center gap-3 pt-1">
+                <Button type="submit" disabled={savingProfile}>
+                  {savingProfile && <Loader2 className="animate-spin" />}
+                  Save changes
+                </Button>
+                {profileMsg && <p className="text-sm text-muted-foreground" role="status">{profileMsg}</p>}
+              </div>
+            </form>
+
+            <form onSubmit={changePassword} className="mt-6 space-y-3 border-t border-border pt-5">
+              <Field label="New password" htmlFor="new-password">
+                <Input id="new-password" type="password" autoComplete="new-password" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={6} />
+              </Field>
+              <div className="flex items-center gap-3">
+                <Button type="submit" variant="secondary" disabled={savingPassword || !newPassword}>
+                  {savingPassword && <Loader2 className="animate-spin" />}
+                  Change password
+                </Button>
+                {passwordMsg && <p className="text-sm text-muted-foreground" role="status">{passwordMsg}</p>}
+              </div>
+            </form>
+          </Card>
+        </FadeUpItem>
+
+        {/* Links (phones have no account menu) */}
+        <FadeUpItem>
+          <Card className="divide-y divide-border">
+            {isAdmin && <LinkRow href="/admin" icon={Shield} label="Admin" accent />}
+            <LinkRow href="/leaderboard" icon={Trophy} label="Leaderboard" />
+            <LinkRow href="/about" icon={Info} label="About SmashTorino" />
+            <button type="button" onClick={signOut} className="flex min-h-[56px] w-full items-center gap-3 px-4 text-left transition-colors hover:bg-white/5 active:bg-white/10">
+              <LogOut className="size-5 text-muted-foreground" aria-hidden />
+              <span className="flex-1">Sign out</span>
+            </button>
+          </Card>
+        </FadeUpItem>
+      </Stagger>
     </main>
+  )
+}
+
+function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+  return (
+    <div className="px-3 py-3 text-center">
+      <dd className="font-display text-[28px] font-bold leading-none tabular">{value}</dd>
+      <dt className="mt-1 text-sm text-muted-foreground">
+        {label}
+        {sub && <span className="block text-[11px] text-subtle">{sub}</span>}
+      </dt>
+    </div>
+  )
+}
+
+function Field({ label, htmlFor, hint, children }: { label: string; htmlFor: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <label htmlFor={htmlFor} className="text-sm font-medium text-muted-foreground">
+        {label}
+      </label>
+      {children}
+      {hint && <p className="text-xs text-subtle">{hint}</p>}
+    </div>
+  )
+}
+
+function LinkRow({ href, icon: Icon, label, accent }: { href: string; icon: typeof Shield; label: string; accent?: boolean }) {
+  return (
+    <Link href={href} className="flex min-h-[56px] items-center gap-3 px-4 transition-colors hover:bg-white/5 active:bg-white/10">
+      <Icon className={cn('size-5', accent ? 'text-primary-text' : 'text-muted-foreground')} aria-hidden />
+      <span className={cn('flex-1', accent && 'text-primary-text')}>{label}</span>
+      <ChevronRight className="size-5 text-subtle" aria-hidden />
+    </Link>
   )
 }
