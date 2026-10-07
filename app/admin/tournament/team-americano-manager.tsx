@@ -308,7 +308,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
         )}
       </div>
 
-      <div className="mb-6 rounded-xl p-5" style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}>
+      <div className="mb-6 rounded-xl p-5" style={{ backgroundColor: 'rgb(7 24 18)', border: '1px solid #2d5a40' }}>
         <p className="text-[11px] tracking-[0.25em] uppercase text-white/60">Team Americano</p>
         <p className="text-2xl font-bold mt-1 text-white">{eventName}</p>
         <p className="text-xs text-white/60 mt-1">
@@ -319,7 +319,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
       {/* STEP 1: TEAM LIST + GENERATE */}
       {groupMatches.length === 0 && (
         <section className="mb-8">
-          <h2 className="text-sm font-semibold text-white mb-3">Step 1 — Approved Teams</h2>
+          <h2 className="font-display text-sm font-semibold text-white mb-3">Step 1 — Approved Teams</h2>
           {teams.length !== 8 ? (
             <div
               className="rounded-xl px-4 py-3 mb-4 text-sm"
@@ -345,12 +345,12 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
               <div
                 key={t.id}
                 className="rounded-xl p-4"
-                style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}
+                style={{ backgroundColor: 'rgb(7 24 18)', border: '1px solid #2d5a40' }}
               >
                 <div className="flex items-center gap-3">
                   <span
                     className="text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: '#1a3d2e', color: '#ff6b35' }}
+                    style={{ backgroundColor: 'rgb(10 31 25)', color: '#ff8a5c' }}
                   >
                     {i + 1}
                   </span>
@@ -367,7 +367,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
             type="button"
             onClick={handleGenerateSchedule}
             disabled={busy || teams.length !== 8}
-            className="w-full py-5 rounded-xl text-lg font-extrabold text-white disabled:opacity-50 shadow-lg"
+            className="w-full py-5 rounded-xl text-lg font-extrabold text-primary-foreground disabled:opacity-50 shadow-lg"
             style={{ backgroundColor: '#ff6b35' }}
           >
             {busy ? 'Generating...' : '🎲 Generate Schedule'}
@@ -378,7 +378,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
       {/* STEP 2: SCHEDULE + STANDINGS */}
       {groupMatches.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-sm font-semibold text-white mb-3">Step 2 — Schedule</h2>
+          <h2 className="font-display text-sm font-semibold text-white mb-3">Step 2 — Schedule</h2>
 
           <div className="space-y-4 mb-6">
             {[1, 2, 3].map(rNum => {
@@ -390,16 +390,16 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
                 <div
                   key={rNum}
                   className="rounded-xl overflow-hidden"
-                  style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}
+                  style={{ backgroundColor: 'rgb(7 24 18)', border: '1px solid #2d5a40' }}
                 >
                   <div
                     className="px-4 py-2 flex items-center justify-between"
-                    style={{ backgroundColor: '#1a3d2e' }}
+                    style={{ backgroundColor: 'rgb(10 31 25)' }}
                   >
                     <p className="text-sm font-bold text-white">{ROUND_LABELS[rNum - 1]}</p>
                     <span className="text-[10px] uppercase tracking-widest text-white/60">20 min</span>
                   </div>
-                  <div className="divide-y" style={{ borderColor: '#2d5a40' }}>
+                  <div className="divide-y" style={{ borderColor: 'rgb(255 255 255 / 0.14)' }}>
                     {rMatches.map(m => {
                       const input = scoreInputs[m.id] ?? { t1: '', t2: '' }
                       const scored = m.team1_score !== null && m.team2_score !== null
@@ -408,12 +408,12 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
                         <div
                           key={m.id}
                           className="p-3"
-                          style={{ borderColor: '#2d5a40' }}
+                          style={{ borderColor: 'rgb(255 255 255 / 0.14)' }}
                         >
                           <div className="flex items-center justify-between mb-2">
                             <p
                               className="text-[10px] font-bold uppercase tracking-wider"
-                              style={{ color: '#ff6b35' }}
+                              style={{ color: '#ff8a5c' }}
                             >
                               Court {slot}
                             </p>
@@ -440,7 +440,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
                                 }))
                               }
                               className="w-11 text-center text-sm font-bold rounded py-1.5 outline-none text-white"
-                              style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+                              style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid #2d5a40' }}
                             />
                             <span className="text-white/50 text-xs">:</span>
                             <input
@@ -455,7 +455,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
                                 }))
                               }
                               className="w-11 text-center text-sm font-bold rounded py-1.5 outline-none text-white"
-                              style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+                              style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid #2d5a40' }}
                             />
                             <div className="flex-1 min-w-0 text-right">
                               <p className="text-xs font-semibold text-white truncate">{teamLabel(m.team2_id)}</p>
@@ -490,7 +490,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
               </p>
               <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #2d5a40' }}>
                 <table className="w-full text-sm">
-                  <thead style={{ backgroundColor: '#0f2318' }}>
+                  <thead style={{ backgroundColor: 'rgb(7 24 18)' }}>
                     <tr className="text-white/60 text-[11px] uppercase tracking-wider">
                       <th className="py-2 px-3 text-left font-semibold">#</th>
                       <th className="py-2 px-2 text-left font-semibold">Team</th>
@@ -506,7 +506,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
                       const diffColor = diff > 0 ? '#4ade80' : diff < 0 ? '#f87171' : '#9ca3af'
                       const diffLabel = diff > 0 ? `+${diff}` : String(diff)
                       return (
-                        <tr key={s.team_id} style={{ borderTop: '1px solid #2d5a40', backgroundColor: '#0f2318' }}>
+                        <tr key={s.team_id} style={{ borderTop: '1px solid #2d5a40', backgroundColor: 'rgb(7 24 18)' }}>
                           <td className="py-2 px-3 font-bold text-white">{i + 1}</td>
                           <td className="py-2 px-2 font-semibold text-white">
                             <div className="truncate max-w-[160px]">{teamLabel(s.team_id)}</div>
@@ -537,7 +537,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
               type="button"
               onClick={handleGenerateFinals}
               disabled={busy}
-              className="w-full py-4 rounded-xl text-base font-bold text-white disabled:opacity-50 shadow-lg"
+              className="w-full py-4 rounded-xl text-base font-bold text-primary-foreground disabled:opacity-50 shadow-lg"
               style={{ backgroundColor: '#ff6b35' }}
             >
               {busy ? 'Generating...' : '🏆 Generate Finals →'}
@@ -554,7 +554,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
       {/* STEP 3: FINALS */}
       {finalMatches.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-sm font-semibold text-white mb-3">Step 3 — Finals</h2>
+          <h2 className="font-display text-sm font-semibold text-white mb-3">Step 3 — Finals</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
             {finalMatches
               .slice()
@@ -571,12 +571,12 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
                     key={m.id}
                     className="rounded-xl p-4"
                     style={{
-                      backgroundColor: '#0f2318',
-                      border: `1px solid ${isChampion ? '#ff6b35' : scored ? '#ff6b35' : '#2d5a40'}`,
+                      backgroundColor: 'rgb(7 24 18)',
+                      border: `1px solid ${isChampion ? '#ff6b35' : scored ? '#ff6b35' : 'rgb(255 255 255 / 0.14)'}`,
                     }}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#ff6b35' }}>
+                      <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#ff8a5c' }}>
                         {meta.emoji} {meta.title}
                       </p>
                       <span className="text-[10px] uppercase tracking-widest text-white/60">30 min</span>
@@ -602,7 +602,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
                           }))
                         }
                         className="w-12 text-center text-sm font-bold rounded py-1.5 outline-none text-white"
-                        style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+                        style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid #2d5a40' }}
                       />
                       <span className="text-white/50 text-xs">:</span>
                       <input
@@ -617,7 +617,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
                           }))
                         }
                         className="w-12 text-center text-sm font-bold rounded py-1.5 outline-none text-white"
-                        style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+                        style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid #2d5a40' }}
                       />
                       <p
                         className="flex-1 text-sm font-semibold truncate text-right"
@@ -680,7 +680,7 @@ function FinalStandings({ finalMatches, teamLabel, teamPlayers }: FinalStandings
       <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-3">Final Standings</p>
       <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #2d5a40' }}>
         <table className="w-full text-sm">
-          <thead style={{ backgroundColor: '#0f2318' }}>
+          <thead style={{ backgroundColor: 'rgb(7 24 18)' }}>
             <tr className="text-white/60 text-[11px] uppercase tracking-wider">
               <th className="py-2 px-3 text-left font-semibold">Place</th>
               <th className="py-2 px-2 text-left font-semibold">Team</th>
@@ -692,7 +692,7 @@ function FinalStandings({ finalMatches, teamLabel, teamPlayers }: FinalStandings
                 key={p.rank}
                 style={{
                   borderTop: '1px solid #2d5a40',
-                  backgroundColor: p.rank === 1 ? 'rgba(255,107,53,0.08)' : '#0f2318',
+                  backgroundColor: p.rank === 1 ? 'rgba(255,107,53,0.08)' : 'rgb(7 24 18)',
                 }}
               >
                 <td className="py-2 px-3 font-bold" style={{ color: p.rank === 1 ? '#ff6b35' : '#fff' }}>

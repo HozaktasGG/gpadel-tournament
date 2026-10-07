@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { Network, ScanLine } from 'lucide-react'
 import { getLevel, getLevelColor } from '@/lib/quiz-questions'
 import { createClient } from '@/lib/supabase-client'
 import { useScrollLock } from '@/lib/use-scroll-lock'
@@ -305,7 +306,7 @@ export default function AdminPage() {
   }
 
   const handleCancelInvite = async (registrationId: string) => {
-    if (!confirm('Bu takım davetini geri çekmek istediğinize emin misiniz?')) return
+    if (!confirm('Withdraw this team invite?')) return
     setCancelingInviteId(registrationId)
     const res = await fetch('/api/team-registration/cancel', {
       method: 'DELETE',
@@ -315,7 +316,7 @@ export default function AdminPage() {
     const data = await res.json().catch(() => ({}))
     setCancelingInviteId(null)
     if (!res.ok) {
-      alert(data.error || 'İşlem başarısız.')
+      alert(data.error || 'Action failed.')
       return
     }
     setPendingInvites(prev => prev.filter(p => p.id !== registrationId))
@@ -484,7 +485,7 @@ export default function AdminPage() {
     const data = await res.json()
     setTeamActionLoading(null)
     if (!res.ok) {
-      alert(data.error || 'İşlem başarısız.')
+      alert(data.error || 'Action failed.')
       return
     }
     await fetchTeamRegs()
@@ -492,10 +493,10 @@ export default function AdminPage() {
 
   const teamStatusBadge = (status: TeamReg['status']) => {
     const config = {
-      pending_partner:  { text: 'Partner Bekleniyor',     bg: 'rgba(234,179,8,0.15)',  color: '#eab308' },
-      pending_approval: { text: 'Admin Onayı Bekleniyor', bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' },
-      approved:         { text: 'Onaylandı',              bg: 'rgba(34,197,94,0.15)',  color: '#22c55e' },
-      rejected:         { text: 'Reddedildi',             bg: 'rgba(239,68,68,0.15)',  color: '#f87171' },
+      pending_partner:  { text: 'Waiting for partner',     bg: 'rgba(234,179,8,0.15)',  color: '#eab308' },
+      pending_approval: { text: 'Waiting for admin approval', bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' },
+      approved:         { text: 'Approved',              bg: 'rgba(34,197,94,0.15)',  color: '#22c55e' },
+      rejected:         { text: 'Rejected',             bg: 'rgba(239,68,68,0.15)',  color: '#f87171' },
     }[status]
     return (
       <span
@@ -511,41 +512,40 @@ export default function AdminPage() {
   const pending = eventRegs.filter(r => r.status !== 'approved').length
 
   return (
-    <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
+    <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: 'rgb(10 31 25)' }}>
       <div className="max-w-6xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
-          <img src="/smashpadel_logo.png" alt="Smash Padel" width={48} height={48} className="rounded-full" />
-          <h1 className="text-2xl font-bold text-white">Admin Panel</h1>
-        </div>
-
-        {/* Quick links */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-10">
-          <a
-            href="/admin/scan"
-            className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-base font-bold text-white"
-            style={{ backgroundColor: '#ff6b35' }}
-          >
-            <span style={{ fontSize: 20 }}>📷</span>
-            Scan QR
-          </a>
-          <a
-            href="/admin/tournament"
-            className="flex items-center justify-center gap-2 w-full py-4 rounded-xl text-base font-bold text-white"
-            style={{ backgroundColor: '#ff6b35' }}
-          >
-            <span style={{ fontSize: 20 }}>🎾</span>
-            Tournament Manager
-          </a>
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="text-overline font-semibold uppercase text-muted-foreground">Organizer workspace</p>
+            <h1 className="mt-1 font-display text-[40px] font-bold leading-none text-white md:text-hero">Overview</h1>
+          </div>
+          {/* Quick links */}
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="/admin/scan"
+              className="inline-flex h-11 items-center gap-2 rounded-xl border border-border-strong px-4 font-display text-base font-semibold transition-colors hover:bg-white/5"
+            >
+              <ScanLine className="size-4" aria-hidden />
+              Check-in scanner
+            </a>
+            <a
+              href="/admin/tournament"
+              className="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 font-display text-base font-semibold text-primary-foreground shadow-cta transition-colors hover:bg-primary-hover"
+            >
+              <Network className="size-4" aria-hidden />
+              Fixtures manager
+            </a>
+          </div>
         </div>
 
         {/* ── CREATE NEW TOURNAMENT ── */}
         <section
           className="rounded-2xl p-6 mb-8"
-          style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ backgroundColor: 'rgb(13 38 32)', border: '1px solid rgba(255,255,255,0.08)' }}
         >
-          <h2 className="text-lg font-bold text-white mb-5">Create New Tournament</h2>
+          <h2 className="font-display text-lg font-bold text-white mb-5">Create New Tournament</h2>
           <form onSubmit={handleCreateEvent} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <label className="block">
@@ -556,7 +556,7 @@ export default function AdminPage() {
                   value={eventForm.name}
                   onChange={e => setEventForm({ ...eventForm, name: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                  style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                   placeholder="e.g. SmashTorino #5"
                 />
               </label>
@@ -569,7 +569,7 @@ export default function AdminPage() {
                   value={eventForm.date}
                   onChange={e => setEventForm({ ...eventForm, date: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                  style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                 />
               </label>
 
@@ -580,7 +580,7 @@ export default function AdminPage() {
                   value={eventForm.time}
                   onChange={e => setEventForm({ ...eventForm, time: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                  style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                 />
               </label>
 
@@ -591,7 +591,7 @@ export default function AdminPage() {
                   value={eventForm.location}
                   onChange={e => setEventForm({ ...eventForm, location: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                  style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                   placeholder="e.g. GPadel Cenisia"
                 />
               </label>
@@ -604,7 +604,7 @@ export default function AdminPage() {
                   value={eventForm.max_players}
                   onChange={e => setEventForm({ ...eventForm, max_players: Number(e.target.value) })}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                  style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                 />
               </label>
 
@@ -617,7 +617,7 @@ export default function AdminPage() {
                   value={eventForm.entry_fee}
                   onChange={e => setEventForm({ ...eventForm, entry_fee: Number(e.target.value) })}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                  style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                 />
               </label>
 
@@ -627,7 +627,7 @@ export default function AdminPage() {
                   value={eventForm.format}
                   onChange={e => setEventForm({ ...eventForm, format: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                  style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                   <option value="Americano">Americano</option>
                   <option value="Round Robin">Round Robin</option>
@@ -642,7 +642,7 @@ export default function AdminPage() {
                   value={eventForm.status}
                   onChange={e => setEventForm({ ...eventForm, status: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                  style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                   <option value="upcoming">Upcoming</option>
                   <option value="active">Active</option>
@@ -658,7 +658,7 @@ export default function AdminPage() {
                 onChange={e => setEventForm({ ...eventForm, description: e.target.value })}
                 rows={3}
                 className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none resize-y"
-                style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                 placeholder="Optional description for participants"
               />
             </label>
@@ -670,10 +670,10 @@ export default function AdminPage() {
                 accept=".pdf,application/pdf"
                 onChange={e => setPdfFile(e.target.files?.[0] ?? null)}
                 className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-[#ff6b35] file:text-white file:text-xs file:font-semibold file:cursor-pointer"
-                style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
               />
               {pdfFile && (
-                <p className="text-gray-400 text-xs mt-1.5">
+                <p className="text-subtle text-xs mt-1.5">
                   {pdfFile.name}
                   {' · '}
                   {(pdfFile.size / 1024).toFixed(0)} KB
@@ -688,7 +688,7 @@ export default function AdminPage() {
                 accept="image/png,image/jpeg,image/webp"
                 onChange={e => setImageFile(e.target.files?.[0] ?? null)}
                 className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none file:mr-3 file:py-1 file:px-3 file:rounded file:border-0 file:bg-[#ff6b35] file:text-white file:text-xs file:font-semibold file:cursor-pointer"
-                style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
               />
               {imageFile && (
                 <div className="mt-2 flex items-center gap-3">
@@ -698,7 +698,7 @@ export default function AdminPage() {
                     className="w-16 h-16 object-cover rounded-lg"
                     style={{ border: '1px solid rgba(255,255,255,0.1)' }}
                   />
-                  <p className="text-gray-400 text-xs">
+                  <p className="text-subtle text-xs">
                     {imageFile.name}
                     {' · '}
                     {(imageFile.size / 1024).toFixed(0)} KB
@@ -723,7 +723,7 @@ export default function AdminPage() {
             <button
               type="submit"
               disabled={creating}
-              className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold text-white disabled:opacity-50"
+              className="w-full sm:w-auto px-6 py-3 rounded-xl text-sm font-bold text-primary-foreground disabled:opacity-50"
               style={{ backgroundColor: '#ff6b35' }}
             >
               {creating
@@ -741,9 +741,9 @@ export default function AdminPage() {
         <section
           id="events"
           className="rounded-2xl p-6 mb-8"
-          style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ backgroundColor: 'rgb(13 38 32)', border: '1px solid rgba(255,255,255,0.08)' }}
         >
-          <h2 className="text-lg font-bold text-white mb-4">
+          <h2 className="font-display text-lg font-bold text-white mb-4">
             All Tournaments
             {!eventsLoading && (
               <span className="ml-2 text-sm font-normal text-white/50">({events.length})</span>
@@ -774,7 +774,7 @@ export default function AdminPage() {
                         ? { bg: 'rgba(34,197,94,0.15)', color: '#22c55e' }
                         : ev.status === 'completed'
                         ? { bg: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }
-                        : { bg: 'rgba(255,107,53,0.15)', color: '#ff6b35' }
+                        : { bg: 'rgba(255,107,53,0.15)', color: '#ff8a5c' }
                     return (
                       <tr key={ev.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <td className="py-3 pr-4 text-white font-medium whitespace-nowrap">{ev.name}</td>
@@ -794,7 +794,7 @@ export default function AdminPage() {
                           <div className="flex gap-2">
                             <a
                               href={`/admin/events/${ev.id}`}
-                              className="px-3 py-1 rounded-lg text-xs font-bold text-white whitespace-nowrap"
+                              className="px-3 py-1 rounded-lg text-xs font-bold text-primary-foreground whitespace-nowrap"
                               style={{ backgroundColor: '#ff6b35' }}
                             >
                               Manage
@@ -830,10 +830,10 @@ export default function AdminPage() {
         <section
           id="players"
           className="rounded-2xl p-6 mb-8"
-          style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ backgroundColor: 'rgb(13 38 32)', border: '1px solid rgba(255,255,255,0.08)' }}
         >
           <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
-            <h2 className="text-lg font-bold text-white">
+            <h2 className="font-display text-lg font-bold text-white">
               All Users
               {!usersLoading && (
                 <span className="ml-2 text-sm font-normal text-white/50">({users.length})</span>
@@ -843,7 +843,7 @@ export default function AdminPage() {
               type="button"
               onClick={handleSyncUsers}
               disabled={syncingUsers}
-              className="px-3 py-1.5 rounded-lg text-xs font-bold text-white disabled:opacity-50"
+              className="px-3 py-1.5 rounded-lg text-xs font-bold text-primary-foreground disabled:opacity-50"
               style={{ backgroundColor: '#ff6b35' }}
             >
               {syncingUsers ? 'Syncing...' : '🔄 Sync Users'}
@@ -917,10 +917,10 @@ export default function AdminPage() {
         {/* ── EVENT REGISTRATIONS ── */}
         <section
           className="rounded-2xl p-6"
-          style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ backgroundColor: 'rgb(13 38 32)', border: '1px solid rgba(255,255,255,0.08)' }}
         >
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-bold text-white">
+            <h2 className="font-display text-lg font-bold text-white">
               Event Registrations
               {!eventRegsLoading && (
                 <span className="ml-2 text-sm font-normal text-white/50">({eventRegs.length})</span>
@@ -1036,11 +1036,11 @@ export default function AdminPage() {
         {/* ── TEAM REGISTRATIONS ── */}
         <section
           className="rounded-2xl p-6 mt-6"
-          style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ backgroundColor: 'rgb(13 38 32)', border: '1px solid rgba(255,255,255,0.08)' }}
         >
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-bold text-white">
-              Takım Kayıtları
+            <h2 className="font-display text-lg font-bold text-white">
+              Team registrations
               {!teamRegsLoading && (
                 <span className="ml-2 text-sm font-normal text-white/50">({teamRegs.length})</span>
               )}
@@ -1049,22 +1049,22 @@ export default function AdminPage() {
               <div className="flex gap-3 text-xs text-white/60">
                 <span>
                   <span className="inline-block w-2 h-2 rounded-full bg-blue-400 mr-1" />
-                  {teamRegs.filter(t => t.status === 'pending_approval').length} onay bekliyor
+                  {teamRegs.filter(t => t.status === 'pending_approval').length} awaiting approval
                 </span>
               </div>
             )}
           </div>
 
           {teamRegsLoading ? (
-            <p className="text-sm text-white/50">Yükleniyor...</p>
+            <p className="text-sm text-white/50">Loading…</p>
           ) : teamRegs.length === 0 ? (
-            <p className="text-sm text-white/50">Henüz takım kaydı yok.</p>
+            <p className="text-sm text-white/50">No team registrations yet.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                    {['Takım', 'Kaptan', 'Partner', 'Etkinlik', 'Durum', 'İşlem'].map(h => (
+                    {['Team', 'Captain', 'Partner', 'Event', 'Status', 'Action'].map(h => (
                       <th key={h} className="text-left text-xs font-semibold text-white/40 uppercase tracking-wide pb-3 pr-4">
                         {h}
                       </th>
@@ -1080,7 +1080,7 @@ export default function AdminPage() {
                     return (
                       <tr key={t.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                         <td className="py-3 pr-4 whitespace-nowrap">
-                          <p className="font-bold" style={{ color: '#ff6b35' }}>{t.team_name}</p>
+                          <p className="font-bold" style={{ color: '#ff8a5c' }}>{t.team_name}</p>
                         </td>
                         <td className="py-3 pr-4 text-white/80">
                           <p className="font-medium whitespace-nowrap">{captainName}</p>
@@ -1101,7 +1101,7 @@ export default function AdminPage() {
                                 className="px-3 py-1 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
                                 style={{ backgroundColor: '#22c55e' }}
                               >
-                                {isActing ? '...' : '✅ Onayla'}
+                                {isActing ? '...' : 'Approve'}
                               </button>
                               <button
                                 onClick={() => handleTeamApproval(t.id, 'reject')}
@@ -1109,7 +1109,7 @@ export default function AdminPage() {
                                 className="px-3 py-1 rounded-lg text-xs font-semibold text-white disabled:opacity-50"
                                 style={{ backgroundColor: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
                               >
-                                {isActing ? '...' : '❌ Reddet'}
+                                {isActing ? '...' : 'Reject'}
                               </button>
                             </div>
                           ) : (
@@ -1135,11 +1135,11 @@ export default function AdminPage() {
         >
           <div
             className="w-full max-w-lg rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
-            style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.12)' }}
+            style={{ backgroundColor: 'rgb(13 38 32)', border: '1px solid rgba(255,255,255,0.12)' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-white">Edit Tournament</h3>
+              <h3 className="font-display text-lg font-bold text-white">Edit Tournament</h3>
               <button onClick={() => setEditingEvent(null)} className="text-white/50 hover:text-white text-xl leading-none">×</button>
             </div>
             <div className="space-y-3">
@@ -1150,7 +1150,7 @@ export default function AdminPage() {
                   value={editingEvent.name}
                   onChange={e => setEditingEvent({ ...editingEvent, name: e.target.value })}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                  style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                 />
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -1161,7 +1161,7 @@ export default function AdminPage() {
                     value={editingEvent.date}
                     onChange={e => setEditingEvent({ ...editingEvent, date: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                    style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                    style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                   />
                 </label>
                 <label className="block">
@@ -1171,7 +1171,7 @@ export default function AdminPage() {
                     value={editingEvent.time ?? ''}
                     onChange={e => setEditingEvent({ ...editingEvent, time: e.target.value || null })}
                     className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                    style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                    style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                   />
                 </label>
               </div>
@@ -1182,7 +1182,7 @@ export default function AdminPage() {
                   value={editingEvent.location ?? ''}
                   onChange={e => setEditingEvent({ ...editingEvent, location: e.target.value || null })}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                  style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                 />
               </label>
               <div className="grid grid-cols-2 gap-3">
@@ -1194,7 +1194,7 @@ export default function AdminPage() {
                     value={editingEvent.max_players ?? 0}
                     onChange={e => setEditingEvent({ ...editingEvent, max_players: Number(e.target.value) || null })}
                     className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                    style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                    style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                   />
                 </label>
                 <label className="block">
@@ -1206,7 +1206,7 @@ export default function AdminPage() {
                     value={editingEvent.entry_fee ?? 0}
                     onChange={e => setEditingEvent({ ...editingEvent, entry_fee: Number(e.target.value) || null })}
                     className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                    style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                    style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                   />
                 </label>
               </div>
@@ -1217,7 +1217,7 @@ export default function AdminPage() {
                     value={editingEvent.format ?? 'Americano'}
                     onChange={e => setEditingEvent({ ...editingEvent, format: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                    style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                    style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                   >
                     <option value="Americano">Americano</option>
                     <option value="Round Robin">Round Robin</option>
@@ -1231,7 +1231,7 @@ export default function AdminPage() {
                     value={editingEvent.status}
                     onChange={e => setEditingEvent({ ...editingEvent, status: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none"
-                    style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                    style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                   >
                     <option value="upcoming">Upcoming</option>
                     <option value="active">Active</option>
@@ -1246,7 +1246,7 @@ export default function AdminPage() {
                   onChange={e => setEditingEvent({ ...editingEvent, description: e.target.value || null })}
                   rows={3}
                   className="w-full px-3 py-2 rounded-lg text-sm text-white outline-none resize-y"
-                  style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
+                  style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.1)' }}
                 />
               </label>
               <div className="flex justify-end gap-2 pt-2">
@@ -1260,7 +1260,7 @@ export default function AdminPage() {
                 <button
                   onClick={handleUpdateEvent}
                   disabled={eventActionLoading === editingEvent.id}
-                  className="px-4 py-2 rounded-lg text-sm font-bold text-white disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg text-sm font-bold text-primary-foreground disabled:opacity-50"
                   style={{ backgroundColor: '#ff6b35' }}
                 >
                   {eventActionLoading === editingEvent.id ? 'Saving...' : 'Save Changes'}
@@ -1280,11 +1280,11 @@ export default function AdminPage() {
         >
           <div
             className="w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto"
-            style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.12)' }}
+            style={{ backgroundColor: 'rgb(13 38 32)', border: '1px solid rgba(255,255,255,0.12)' }}
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-5">
-              <h3 className="text-lg font-bold text-white">User Details</h3>
+              <h3 className="font-display text-lg font-bold text-white">User Details</h3>
               <button onClick={() => setSelectedUser(null)} className="text-white/50 hover:text-white text-xl leading-none">×</button>
             </div>
             <dl className="space-y-3">
@@ -1308,25 +1308,25 @@ export default function AdminPage() {
 
             {(pendingInvitesLoading || pendingInvites.length > 0) && (
               <div className="mt-6 pt-5" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                <h4 className="text-sm font-bold text-white mb-3">Bekleyen Takım Davetleri</h4>
+                <h4 className="text-sm font-bold text-white mb-3">Pending team invites</h4>
                 {pendingInvitesLoading ? (
-                  <p className="text-xs text-white/50">Yükleniyor...</p>
+                  <p className="text-xs text-white/50">Loading…</p>
                 ) : (
                   <div className="space-y-2">
                     {pendingInvites.map(inv => {
                       const badge = inv.status === 'pending_partner'
-                        ? { text: 'Partner Bekleniyor', bg: 'rgba(234,179,8,0.15)', color: '#eab308' }
-                        : { text: 'Admin Onayı Bekleniyor', bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' }
+                        ? { text: 'Waiting for partner', bg: 'rgba(234,179,8,0.15)', color: '#eab308' }
+                        : { text: 'Waiting for admin approval', bg: 'rgba(59,130,246,0.15)', color: '#3b82f6' }
                       const isCanceling = cancelingInviteId === inv.id
                       return (
                         <div
                           key={inv.id}
                           className="rounded-lg p-3"
-                          style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.08)' }}
+                          style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid rgba(255,255,255,0.08)' }}
                         >
                           <div className="flex items-start justify-between gap-3 mb-2">
                             <div className="min-w-0">
-                              <p className="text-sm font-bold text-white truncate" style={{ color: '#ff6b35' }}>{inv.team_name}</p>
+                              <p className="text-sm font-bold text-white truncate" style={{ color: '#ff8a5c' }}>{inv.team_name}</p>
                               <p className="text-xs text-white/60 truncate">{inv.event_name ?? '—'}</p>
                             </div>
                             <span
@@ -1342,7 +1342,7 @@ export default function AdminPage() {
                             className="px-2.5 py-1 rounded-md text-[11px] font-semibold disabled:opacity-50"
                             style={{ backgroundColor: 'rgba(239,68,68,0.2)', border: '1px solid rgba(239,68,68,0.4)', color: '#f87171' }}
                           >
-                            {isCanceling ? '...' : '🗑 İsteği Geri Çek'}
+                            {isCanceling ? '...' : 'Withdraw request'}
                           </button>
                         </div>
                       )

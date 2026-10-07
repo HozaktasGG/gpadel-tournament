@@ -305,7 +305,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
 
       {!tournament && (
         <section>
-          <h2 className="text-sm font-semibold text-white mb-3">New Tournament</h2>
+          <h2 className="font-display text-sm font-semibold text-white mb-3">New Tournament</h2>
           <p className="text-xs text-white/60 mb-4">
             Court Americano. 12 players, 3 courts, 4 rounds. Players are fetched automatically from approved event registrations.
           </p>
@@ -328,7 +328,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
             type="button"
             onClick={handleStart}
             disabled={busy || registeredCount !== 12}
-            className="w-full py-5 rounded-xl text-lg font-extrabold text-white disabled:opacity-50 shadow-lg"
+            className="w-full py-5 rounded-xl text-lg font-extrabold text-primary-foreground disabled:opacity-50 shadow-lg"
             style={{ backgroundColor: '#ff6b35' }}
           >
             {busy ? 'Drawing...' : '🎲 Draw & Start Tournament'}
@@ -338,7 +338,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
 
       {tournament && (
         <>
-          <div className="mb-6 rounded-xl p-5" style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}>
+          <div className="mb-6 rounded-xl p-5" style={{ backgroundColor: 'rgb(7 24 18)', border: '1px solid #2d5a40' }}>
             <div className="flex items-start justify-between flex-wrap gap-3">
               <div>
                 <p className="text-[11px] tracking-[0.25em] uppercase text-white/60">Court Americano</p>
@@ -362,7 +362,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
 
           {tournament.status === 'active' && currentRound && (
             <section className="mb-8">
-              <h2 className="text-sm font-semibold text-white mb-3">
+              <h2 className="font-display text-sm font-semibold text-white mb-3">
                 Round {currentRound.round_number} — Matches
               </h2>
               {currentMatches.length === 0 ? (
@@ -377,12 +377,12 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
                         key={m.id}
                         className="rounded-xl p-4"
                         style={{
-                          backgroundColor: '#0f2318',
-                          border: `1px solid ${scored ? '#ff6b35' : '#2d5a40'}`,
+                          backgroundColor: 'rgb(7 24 18)',
+                          border: `1px solid ${scored ? '#ff6b35' : 'rgb(255 255 255 / 0.14)'}`,
                         }}
                       >
                         <div className="flex items-center justify-between mb-3">
-                          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#ff6b35' }}>
+                          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#ff8a5c' }}>
                             Court {m.court_number}
                           </p>
                           {scored && (
@@ -408,7 +408,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
                               }))
                             }
                             className="w-14 text-center text-lg font-bold rounded py-2 outline-none text-white"
-                            style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+                            style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid #2d5a40' }}
                           />
                           <span className="text-white/50">:</span>
                           <input
@@ -423,7 +423,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
                               }))
                             }
                             className="w-14 text-center text-lg font-bold rounded py-2 outline-none text-white"
-                            style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+                            style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid #2d5a40' }}
                           />
                           <div className="flex-1 text-right">
                             <p className="text-sm font-semibold text-white leading-snug">{nameOf(m.team2_player1)}</p>
@@ -456,7 +456,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
                 type="button"
                 onClick={handleEndRound}
                 disabled={busy || !canEndRound}
-                className="mt-5 w-full py-3.5 rounded-lg text-sm font-bold text-white disabled:opacity-40"
+                className="mt-5 w-full py-3.5 rounded-lg text-sm font-bold text-primary-foreground disabled:opacity-40"
                 style={{ backgroundColor: '#ff6b35' }}
               >
                 {busy
@@ -476,12 +476,12 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
           )}
 
           <section className="mb-8">
-            <h2 className="text-sm font-semibold text-white mb-3">
+            <h2 className="font-display text-sm font-semibold text-white mb-3">
               {tournament.status === 'finished' ? 'Final Standings' : 'Live Rankings'}
             </h2>
             <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #2d5a40' }}>
               <table className="w-full text-sm">
-                <thead style={{ backgroundColor: '#0f2318' }}>
+                <thead style={{ backgroundColor: 'rgb(7 24 18)' }}>
                   <tr className="text-white/60 text-[11px] uppercase tracking-wider">
                     <th className="py-2 px-3 text-left font-semibold">#</th>
                     <th className="py-2 px-2 text-left font-semibold">Player</th>
@@ -514,7 +514,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-sm font-semibold text-white mb-3">Full Fixture</h2>
+            <h2 className="font-display text-sm font-semibold text-white mb-3">Full Fixture</h2>
             <div className="space-y-4">
               {rounds.map(r => {
                 const rMatches = matches
@@ -528,7 +528,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
                   >
                     <div
                       className="flex items-center justify-between px-4 py-2.5"
-                      style={{ backgroundColor: '#0f2318' }}
+                      style={{ backgroundColor: 'rgb(7 24 18)' }}
                     >
                       <p className="text-sm font-bold text-white">
                         Round {r.round_number}
@@ -566,7 +566,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
                         >
                           <p
                             className="text-[10px] font-bold uppercase tracking-widest w-10"
-                            style={{ color: '#ff6b35' }}
+                            style={{ color: '#ff8a5c' }}
                           >
                             C{m.court_number}
                           </p>

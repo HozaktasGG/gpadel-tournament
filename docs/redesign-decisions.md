@@ -53,3 +53,7 @@ One line per non-trivial decision. Mockups: `design/01–04`.
 - Phones get a compact footer (social + privacy); full footer on desktop. Mockups show no footer on phones.
 - New `app/not-found.tsx`, `app/error.tsx` and route `loading.tsx` skeletons.
 - About copy: "Pro badge" corrected to "Advanced" (the highest level that exists).
+- Admin overview, fixtures managers and check-in re-themed with the same styling-only codemod; their score/round/draw logic is untouched (mockup 04 covers only "Manage event").
+- Remaining Turkish admin strings translated to English (UI text only).
+- Fixtures manager accepts `?event=<id>` to open an event directly (used by Manage event → Fixtures; read-only URL param).
+- Selects use `appearance: none` + token surface + chevron (WebKit's native grey select clashed with the theme).

@@ -143,17 +143,17 @@ export default function AdminScanPage() {
   const checkedInCount = list.filter(r => r.checked_in).length
 
   return (
-    <main className="min-h-dvh bg-white p-6 sm:p-12">
+    <main className="min-h-dvh bg-background p-6 sm:p-12">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <img src="/smashpadel_logo.png" alt="Smash Padel" width={44} height={44} className="rounded-full" />
-            <h1 className="text-lg font-bold text-black">Check-In Scanner</h1>
+            <h1 className="font-display text-lg font-bold text-foreground">Check-In Scanner</h1>
           </div>
-          <a href="/admin" className="text-sm text-gray-500 hover:text-black">← Back to Admin</a>
+          <a href="/admin" className="text-sm text-subtle hover:text-foreground">← Back to Admin</a>
         </div>
 
-        <div className="mb-5 text-sm text-gray-700">
+        <div className="mb-5 text-sm text-foreground/85">
           <strong>{checkedInCount}</strong> / {total} checked in
         </div>
 
@@ -162,15 +162,14 @@ export default function AdminScanPage() {
           {!scanning ? (
             <button
               onClick={startScanner}
-              className="w-full py-3 text-sm font-semibold text-white rounded"
-              style={{ backgroundColor: '#1a3d2e' }}
+              className="min-h-12 w-full rounded-xl bg-primary font-display text-lg font-semibold text-primary-foreground shadow-cta transition-colors hover:bg-primary-hover active:bg-primary-pressed"
             >
-              📷 Start Scanner
+              📷 Start scanner
             </button>
           ) : (
             <button
               onClick={stopScanner}
-              className="w-full py-3 text-sm font-semibold text-white bg-gray-800 rounded hover:bg-black"
+              className="min-h-12 w-full rounded-xl border border-border-strong font-display text-lg font-semibold transition-colors hover:bg-white/5"
             >
               Stop Scanner
             </button>
@@ -190,10 +189,10 @@ export default function AdminScanPage() {
             style={{
               backgroundColor:
                 scanResult.kind === 'success'
-                  ? '#ecfdf5'
+                  ? 'rgb(95 208 138 / 0.12)'
                   : scanResult.kind === 'already'
-                  ? '#fefce8'
-                  : '#fef2f2',
+                  ? 'rgb(200 232 102 / 0.12)'
+                  : 'rgb(242 118 106 / 0.12)',
               borderColor:
                 scanResult.kind === 'success'
                   ? '#10b981'
@@ -204,34 +203,34 @@ export default function AdminScanPage() {
           >
             {scanResult.kind === 'success' && (
               <>
-                <p className="text-lg font-bold text-black">
+                <p className="text-lg font-bold text-foreground">
                   ✅ {scanResult.registration.first_name} {scanResult.registration.last_name} checked in!
                 </p>
-                <p className="text-sm text-gray-600 mt-1">{scanResult.registration.email}</p>
+                <p className="text-sm text-muted-foreground mt-1">{scanResult.registration.email}</p>
               </>
             )}
             {scanResult.kind === 'already' && (
               <>
-                <p className="text-lg font-bold text-black">
+                <p className="text-lg font-bold text-foreground">
                   ⚠️ {scanResult.registration.first_name} {scanResult.registration.last_name} already checked in
                 </p>
-                <p className="text-sm text-gray-600 mt-1">{scanResult.registration.email}</p>
+                <p className="text-sm text-muted-foreground mt-1">{scanResult.registration.email}</p>
               </>
             )}
             {scanResult.kind === 'error' && (
               <>
-                <p className="text-xs font-semibold uppercase tracking-wide text-red-700 mb-1">Error</p>
-                <p className="text-sm text-black">{scanResult.message}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-destructive mb-1">Error</p>
+                <p className="text-sm text-foreground">{scanResult.message}</p>
               </>
             )}
-            {actionLoading && <p className="text-xs text-gray-500 mt-2">Processing...</p>}
+            {actionLoading && <p className="text-xs text-subtle mt-2">Processing...</p>}
           </div>
         )}
 
         {/* Checked-in list */}
-        <h2 className="text-sm font-semibold text-black mb-3">Checked In</h2>
+        <h2 className="font-display text-sm font-semibold text-foreground mb-3">Checked In</h2>
         {list.filter(r => r.checked_in).length === 0 ? (
-          <p className="text-sm text-gray-400">No check-ins yet.</p>
+          <p className="text-sm text-subtle">No check-ins yet.</p>
         ) : (
           <ul className="space-y-2">
             {list
@@ -239,15 +238,15 @@ export default function AdminScanPage() {
               .map(r => (
                 <li
                   key={r.id}
-                  className="border border-gray-200 rounded-lg px-4 py-3 flex items-center justify-between"
+                  className="border border-border-strong rounded-lg px-4 py-3 flex items-center justify-between"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-black">
+                    <p className="text-sm font-semibold text-foreground">
                       {r.first_name} {r.last_name}
                     </p>
-                    <p className="text-xs text-gray-500">{r.email}</p>
+                    <p className="text-xs text-subtle">{r.email}</p>
                   </div>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-subtle">
                     {r.checked_in_at ? new Date(r.checked_in_at).toLocaleTimeString() : ''}
                   </span>
                 </li>
@@ -255,19 +254,19 @@ export default function AdminScanPage() {
           </ul>
         )}
 
-        <h2 className="text-sm font-semibold text-black mt-8 mb-3">Pending</h2>
+        <h2 className="font-display text-sm font-semibold text-foreground mt-8 mb-3">Pending</h2>
         {list.filter(r => !r.checked_in).length === 0 ? (
-          <p className="text-sm text-gray-400">Everyone is in.</p>
+          <p className="text-sm text-subtle">Everyone is in.</p>
         ) : (
           <ul className="space-y-2">
             {list
               .filter(r => !r.checked_in)
               .map(r => (
-                <li key={r.id} className="border border-gray-200 rounded-lg px-4 py-3">
-                  <p className="text-sm font-semibold text-black">
+                <li key={r.id} className="border border-border-strong rounded-lg px-4 py-3">
+                  <p className="text-sm font-semibold text-foreground">
                     {r.first_name} {r.last_name}
                   </p>
-                  <p className="text-xs text-gray-500">{r.email}</p>
+                  <p className="text-xs text-subtle">{r.email}</p>
                 </li>
               ))}
           </ul>

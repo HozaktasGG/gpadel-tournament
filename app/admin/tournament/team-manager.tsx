@@ -280,7 +280,7 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
         </button>
       </div>
 
-      <div className="mb-6 rounded-xl p-5" style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}>
+      <div className="mb-6 rounded-xl p-5" style={{ backgroundColor: 'rgb(7 24 18)', border: '1px solid #2d5a40' }}>
         <p className="text-[11px] tracking-[0.25em] uppercase text-white/60">Team Tournament</p>
         <p className="text-2xl font-bold mt-1 text-white">{eventName}</p>
         <p className="text-xs text-white/60 mt-1">{teams.length} approved team{teams.length === 1 ? '' : 's'}</p>
@@ -289,7 +289,7 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
       {/* PHASE 1: DRAW GROUPS */}
       {groups.length === 0 && (
         <section className="mb-8">
-          <h2 className="text-sm font-semibold text-white mb-3">Phase 1 — Group Draw</h2>
+          <h2 className="font-display text-sm font-semibold text-white mb-3">Phase 1 — Group Draw</h2>
           {teams.length !== 16 ? (
             <div
               className="rounded-xl px-4 py-3 mb-4 text-sm"
@@ -313,7 +313,7 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
             type="button"
             onClick={handleDrawGroups}
             disabled={busy || teams.length !== 16}
-            className="w-full py-5 rounded-xl text-lg font-extrabold text-white disabled:opacity-50 shadow-lg"
+            className="w-full py-5 rounded-xl text-lg font-extrabold text-primary-foreground disabled:opacity-50 shadow-lg"
             style={{ backgroundColor: '#ff6b35' }}
           >
             {busy ? 'Drawing...' : '🎲 Draw Groups'}
@@ -324,7 +324,7 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
       {/* PHASE 2: GROUP STAGE */}
       {groups.length > 0 && (
         <section className="mb-8">
-          <h2 className="text-sm font-semibold text-white mb-3">Phase 2 — Group Stage</h2>
+          <h2 className="font-display text-sm font-semibold text-white mb-3">Phase 2 — Group Stage</h2>
 
           {/* Group standings */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -334,9 +334,9 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
                 <div
                   key={gName}
                   className="rounded-xl overflow-hidden"
-                  style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}
+                  style={{ backgroundColor: 'rgb(7 24 18)', border: '1px solid #2d5a40' }}
                 >
-                  <div className="px-3 py-2" style={{ backgroundColor: '#1a3d2e' }}>
+                  <div className="px-3 py-2" style={{ backgroundColor: 'rgb(10 31 25)' }}>
                     <p className="text-xs font-bold text-white">Group {gName}</p>
                   </div>
                   <table className="w-full text-[11px]">
@@ -382,12 +382,12 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
                   <div
                     key={slot}
                     className="rounded-xl overflow-hidden"
-                    style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}
+                    style={{ backgroundColor: 'rgb(7 24 18)', border: '1px solid #2d5a40' }}
                   >
-                    <div className="px-4 py-2" style={{ backgroundColor: '#1a3d2e' }}>
+                    <div className="px-4 py-2" style={{ backgroundColor: 'rgb(10 31 25)' }}>
                       <p className="text-sm font-bold text-white">Slot {slot}</p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x" style={{ borderColor: '#2d5a40' }}>
+                    <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x" style={{ borderColor: 'rgb(255 255 255 / 0.14)' }}>
                       {slotMatches.map(m => {
                         const input = scoreInputs[m.id] ?? { t1: '', t2: '' }
                         const scored = m.team1_score !== null && m.team2_score !== null
@@ -395,10 +395,10 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
                           <div
                             key={m.id}
                             className="p-3"
-                            style={{ borderColor: '#2d5a40' }}
+                            style={{ borderColor: 'rgb(255 255 255 / 0.14)' }}
                           >
                             <div className="flex items-center justify-between mb-2">
-                              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#ff6b35' }}>
+                              <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: '#ff8a5c' }}>
                                 Court {m.match_order} · Group {m.group_name}
                               </p>
                               {scored && (
@@ -419,7 +419,7 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
                                   }))
                                 }
                                 className="w-10 text-center text-sm font-bold rounded py-1 outline-none text-white"
-                                style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+                                style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid #2d5a40' }}
                               />
                               <span className="text-white/50 text-xs">:</span>
                               <input
@@ -434,7 +434,7 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
                                   }))
                                 }
                                 className="w-10 text-center text-sm font-bold rounded py-1 outline-none text-white"
-                                style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+                                style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid #2d5a40' }}
                               />
                               <p className="flex-1 text-xs font-semibold text-white truncate text-right">{teamLabel(m.team2_id)}</p>
                             </div>
@@ -464,7 +464,7 @@ export default function TeamManager({ eventId, eventName, onBack }: Props) {
               type="button"
               onClick={handleGenerateKnockout}
               disabled={busy}
-              className="w-full py-4 rounded-xl text-base font-bold text-white disabled:opacity-50 shadow-lg"
+              className="w-full py-4 rounded-xl text-base font-bold text-primary-foreground disabled:opacity-50 shadow-lg"
               style={{ backgroundColor: '#ff6b35' }}
             >
               {busy ? 'Generating...' : '🏆 Generate Knockout Bracket'}
@@ -531,12 +531,12 @@ function KnockoutBracket({
       <div
         className="rounded-lg p-3"
         style={{
-          backgroundColor: '#0f2318',
-          border: `1px solid ${scored ? '#ff6b35' : '#2d5a40'}`,
+          backgroundColor: 'rgb(7 24 18)',
+          border: `1px solid ${scored ? '#ff6b35' : 'rgb(255 255 255 / 0.14)'}`,
           minWidth: 200,
         }}
       >
-        <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: '#ff6b35' }}>
+        <p className="text-[10px] font-bold uppercase tracking-wider mb-2" style={{ color: '#ff8a5c' }}>
           {label}
         </p>
         <div className="flex items-center gap-2 mb-1">
@@ -559,7 +559,7 @@ function KnockoutBracket({
               }))
             }
             className="w-9 text-center text-xs font-bold rounded py-1 outline-none text-white disabled:opacity-40"
-            style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+            style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid #2d5a40' }}
           />
         </div>
         <div className="flex items-center gap-2 mb-2">
@@ -582,7 +582,7 @@ function KnockoutBracket({
               }))
             }
             className="w-9 text-center text-xs font-bold rounded py-1 outline-none text-white disabled:opacity-40"
-            style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+            style={{ backgroundColor: 'rgb(10 31 25)', border: '1px solid #2d5a40' }}
           />
         </div>
         <button
@@ -603,7 +603,7 @@ function KnockoutBracket({
 
   return (
     <section className="mb-8">
-      <h2 className="text-sm font-semibold text-white mb-4">Phase 3 — Knockout Bracket</h2>
+      <h2 className="font-display text-sm font-semibold text-white mb-4">Phase 3 — Knockout Bracket</h2>
       <div className="overflow-x-auto">
         <div className="flex items-stretch gap-6 min-w-fit pb-2">
           <div className="flex flex-col justify-around gap-4">
