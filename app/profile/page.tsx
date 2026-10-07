@@ -262,7 +262,7 @@ export default function ProfilePage() {
             <button
               type="button"
               onClick={copyCode}
-              className="mt-1 inline-flex min-h-9 items-center gap-1.5 text-[15px] tracking-wide text-muted-foreground hover:text-foreground"
+              className="mt-1 inline-flex min-h-11 items-center gap-1.5 text-[15px] tracking-wide text-muted-foreground hover:text-foreground"
               aria-label={`Copy player code ${playerCode}`}
             >
               {playerCode}

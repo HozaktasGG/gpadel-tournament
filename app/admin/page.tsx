@@ -512,7 +512,7 @@ export default function AdminPage() {
   const pending = eventRegs.filter(r => r.status !== 'approved').length
 
   return (
-    <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: 'rgb(10 31 25)' }}>
+    <main className="tap-44 min-h-dvh p-6 sm:p-10" style={{ backgroundColor: 'rgb(10 31 25)' }}>
       <div className="max-w-6xl mx-auto">
 
         {/* Header */}

@@ -189,7 +189,7 @@ export default function EventAdmin({
             <span className={cn('size-2 rounded-full', open ? 'bg-success' : 'bg-subtle')} aria-hidden />
             {open ? 'Registration open' : 'Registration closed'}
           </Badge>
-          <Button variant="secondary" size="sm" onClick={() => setEditingDetails(true)} aria-label="Edit details" className="max-md:size-10 max-md:px-0">
+          <Button variant="secondary" size="sm" onClick={() => setEditingDetails(true)} aria-label="Edit details" className="max-md:size-11 max-md:px-0">
             <Pencil />
             <span className="max-md:hidden">Edit details</span>
           </Button>
@@ -201,7 +201,7 @@ export default function EventAdmin({
               </a>
             </Button>
           )}
-          <Button asChild variant="ghost" size="sm" className="max-md:size-10 max-md:px-0">
+          <Button asChild variant="ghost" size="sm" className="max-md:size-11 max-md:px-0">
             <Link href={`/tournaments/${event.id}`} aria-label="Public page">
               <ExternalLink />
               <span className="max-md:hidden">Public page</span>

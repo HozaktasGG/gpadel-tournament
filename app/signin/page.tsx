@@ -60,7 +60,7 @@ function SignInContent() {
       footer={
         <>
           New to SmashTorino?{' '}
-          <Link href="/signup" className="font-semibold text-primary-text underline-offset-4 hover:underline">
+          <Link href="/signup" className="inline-flex min-h-11 items-center font-semibold text-primary-text underline-offset-4 hover:underline">
             Create an account
           </Link>
         </>

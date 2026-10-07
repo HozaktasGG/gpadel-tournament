@@ -143,14 +143,14 @@ export default function AdminScanPage() {
   const checkedInCount = list.filter(r => r.checked_in).length
 
   return (
-    <main className="min-h-dvh bg-background p-6 sm:p-12">
+    <main className="tap-44 min-h-dvh bg-background p-6 sm:p-12">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <img src="/smashpadel_logo.png" alt="Smash Padel" width={44} height={44} className="rounded-full" />
             <h1 className="font-display text-lg font-bold text-foreground">Check-In Scanner</h1>
           </div>
-          <a href="/admin" className="text-sm text-subtle hover:text-foreground">← Back to Admin</a>
+          <a href="/admin" className="inline-flex min-h-11 items-center text-sm text-subtle hover:text-foreground">← Back to Admin</a>
         </div>
 
         <div className="mb-5 text-sm text-foreground/85">

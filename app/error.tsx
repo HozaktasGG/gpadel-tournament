@@ -19,11 +19,11 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
       <h1 className="mt-6 font-display text-[32px] font-bold leading-tight">Something went wrong</h1>
       <p className="mt-2 text-[17px] text-muted-foreground">Please try again. If it keeps happening, let us know on WhatsApp.</p>
       <div className="mt-6 flex w-full flex-col gap-3 sm:flex-row">
-        <Button size="lg" className="flex-1" onClick={reset}>
+        <Button size="lg" className="sm:flex-1" onClick={reset}>
           <RotateCcw />
           Try again
         </Button>
-        <Button asChild size="lg" variant="secondary" className="flex-1">
+        <Button asChild size="lg" variant="secondary" className="sm:flex-1">
           <Link href="/">Go home</Link>
         </Button>
       </div>

@@ -47,7 +47,7 @@ export default function AdminTournamentPage() {
   if (selected) {
     if (selected.format === 'Team Americano') {
       return (
-        <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: 'rgb(10 31 25)' }}>
+        <main className="tap-44 min-h-dvh p-6 sm:p-10" style={{ backgroundColor: 'rgb(10 31 25)' }}>
           <TeamAmericanoManager
             eventId={selected.id}
             eventName={selected.name}
@@ -58,7 +58,7 @@ export default function AdminTournamentPage() {
     }
     if (selected.format === 'Team') {
       return (
-        <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: 'rgb(10 31 25)' }}>
+        <main className="tap-44 min-h-dvh p-6 sm:p-10" style={{ backgroundColor: 'rgb(10 31 25)' }}>
           <TeamManager
             eventId={selected.id}
             eventName={selected.name}
@@ -68,21 +68,21 @@ export default function AdminTournamentPage() {
       )
     }
     return (
-      <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: 'rgb(10 31 25)' }}>
+      <main className="tap-44 min-h-dvh p-6 sm:p-10" style={{ backgroundColor: 'rgb(10 31 25)' }}>
         <AmericanoManager eventId={selected.id} onBack={() => setSelected(null)} />
       </main>
     )
   }
 
   return (
-    <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: 'rgb(10 31 25)' }}>
+    <main className="tap-44 min-h-dvh p-6 sm:p-10" style={{ backgroundColor: 'rgb(10 31 25)' }}>
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
             <img src="/smashpadel_logo.png" alt="Smash Padel" width={44} height={44} className="rounded-full" />
             <h1 className="font-display text-lg font-bold text-white">Tournament Admin</h1>
           </div>
-          <a href="/admin" className="text-sm text-white/60 hover:text-white">← Admin</a>
+          <a href="/admin" className="inline-flex min-h-11 items-center text-sm text-white/60 hover:text-white">← Admin</a>
         </div>
 
         <h2 className="font-display text-2xl font-bold text-white mb-2">Select a Tournament</h2>

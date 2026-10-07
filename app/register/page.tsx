@@ -70,7 +70,7 @@ export default function RegisterPage() {
   const remaining = CAPACITY - participants.length
 
   return (
-    <main className="min-h-dvh bg-background p-6 sm:p-12">
+    <main className="tap-44 min-h-dvh bg-background p-6 sm:p-12">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-center mb-10">
           <img
@@ -105,33 +105,33 @@ export default function RegisterPage() {
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">First Name</label>
+                <label htmlFor="reg-first" className="block text-sm font-medium text-foreground mb-1">First Name</label>
                 <input
                   type="text"
                   value={first_name}
                   onChange={e => setFirstName(e.target.value)}
                   required
-                  className="w-full border border-border-strong rounded px-3 py-2 text-sm outline-none focus:border-border-strong"
+                  id="reg-first" className="min-h-11 w-full rounded-xl border border-border-strong px-3 py-2 text-base outline-none focus:border-primary-text"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Last Name</label>
+                <label htmlFor="reg-last" className="block text-sm font-medium text-foreground mb-1">Last Name</label>
                 <input
                   type="text"
                   value={last_name}
                   onChange={e => setLastName(e.target.value)}
                   required
-                  className="w-full border border-border-strong rounded px-3 py-2 text-sm outline-none focus:border-border-strong"
+                  id="reg-last" className="min-h-11 w-full rounded-xl border border-border-strong px-3 py-2 text-base outline-none focus:border-primary-text"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1">Email</label>
+                <label htmlFor="reg-email" className="block text-sm font-medium text-foreground mb-1">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   required
-                  className="w-full border border-border-strong rounded px-3 py-2 text-sm outline-none focus:border-border-strong"
+                  id="reg-email" className="min-h-11 w-full rounded-xl border border-border-strong px-3 py-2 text-base outline-none focus:border-primary-text"
                 />
               </div>
 
@@ -148,7 +148,7 @@ export default function RegisterPage() {
                   id="privacy"
                   checked={privacyAccepted}
                   onChange={e => setPrivacyAccepted(e.target.checked)}
-                  className="mt-0.5 cursor-pointer"
+                  className="mt-0.5 size-5 cursor-pointer accent-[#ff6b35]"
                 />
                 <label htmlFor="privacy" className="text-sm text-foreground/85 cursor-pointer">
                   I agree to the{' '}

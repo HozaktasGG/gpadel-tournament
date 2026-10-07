@@ -44,10 +44,10 @@ export default function AboutPage() {
           skill assessment, and introduce yourself to the community.
         </p>
         <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-          <Button asChild size="lg" className="flex-1">
+          <Button asChild size="lg" className="sm:flex-1">
             <Link href="/tournaments">See tournaments</Link>
           </Button>
-          <Button asChild size="lg" variant="secondary" className="flex-1">
+          <Button asChild size="lg" variant="secondary" className="sm:flex-1">
             <Link href="/signup">Create account</Link>
           </Button>
         </div>

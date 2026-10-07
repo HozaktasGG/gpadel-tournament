@@ -56,7 +56,7 @@ export function RatingChart({ rows }: { rows: ScoreRow[] }) {
               aria-pressed={range === r.value}
               onClick={() => setRange(r.value)}
               className={cn(
-                'h-9 whitespace-nowrap rounded-full px-3 text-[13px] font-medium transition-colors',
+                'h-11 whitespace-nowrap rounded-full px-3 text-[13px] font-medium transition-colors',
                 range === r.value ? 'bg-foreground text-pitch-950' : 'text-muted-foreground hover:text-foreground'
               )}
             >

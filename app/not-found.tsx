@@ -12,10 +12,10 @@ export default function NotFound() {
       <h1 className="mt-2 font-display text-[32px] font-bold leading-tight">Out of court</h1>
       <p className="mt-2 text-[17px] text-muted-foreground">This page doesn’t exist or has moved.</p>
       <div className="mt-6 flex w-full flex-col gap-3 sm:flex-row">
-        <Button asChild size="lg" className="flex-1">
+        <Button asChild size="lg" className="sm:flex-1">
           <Link href="/">Discover tournaments</Link>
         </Button>
-        <Button asChild size="lg" variant="secondary" className="flex-1">
+        <Button asChild size="lg" variant="secondary" className="sm:flex-1">
           <Link href="/dashboard">My dashboard</Link>
         </Button>
       </div>

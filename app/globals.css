@@ -102,6 +102,20 @@
 
   /* iOS Safari zooms into any focused field under 16px. Older pages use
      text-sm inputs, so enforce the floor on touch devices. */
+  /* Older admin tools (dense desktop tables): 44px touch targets on phones. */
+  @media (pointer: coarse) {
+    .tap-44 button,
+    .tap-44 select,
+    .tap-44 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']) {
+      min-height: 44px;
+    }
+    .tap-44 td a[href] {
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+    }
+  }
+
   @media (pointer: coarse) {
     input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
     select,

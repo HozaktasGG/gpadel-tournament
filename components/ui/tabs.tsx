@@ -36,7 +36,7 @@ export const tabTriggerClass = (variant: TabsVariant) =>
         'after:absolute after:inset-x-2 after:-bottom-px after:h-[3px] after:rounded-full after:bg-primary after:opacity-0 after:transition-opacity data-[state=active]:after:opacity-100'
       )
     : cn(
-        'inline-flex h-10 flex-1 items-center justify-center rounded-full px-4 text-[15px] font-medium text-muted-foreground transition-colors',
+        'inline-flex h-11 flex-1 items-center justify-center rounded-full px-4 text-[15px] font-medium text-muted-foreground transition-colors',
         'hover:text-foreground data-[state=active]:bg-foreground data-[state=active]:text-pitch-950'
       )
 
