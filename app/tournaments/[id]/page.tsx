@@ -400,7 +400,8 @@ export default async function TournamentDetailPage({
   const live = isEventLive(ev, !!activeTournament) || ev.status === 'active'
   const priceLabel = formatPrice(ev.entry_fee)
   const subtitle = ev.subtitle?.trim() || (ev.format === 'Team' ? 'Team Tournament' : `${ev.format ?? 'Americano'} Tournament`)
-  const cover = ev.image_url || '/hero-bg.jpg'
+  // image_url is usually an organizer/collab logo, so it is shown as a badge, never cropped as a cover.
+  const cover = '/hero-bg.jpg'
   const facts = FORMAT_FACTS[ev.format ?? 'Americano'] ?? FORMAT_FACTS.Americano
 
   // Team lookups (approved teams only, as before).
@@ -812,6 +813,13 @@ export default async function TournamentDetailPage({
           </div>
           <HeroControls title={ev.name} />
           <div className="absolute inset-x-0 bottom-0 px-4 pb-4 md:px-8 md:pb-6">
+            {ev.image_url && (
+              <img
+                src={ev.image_url}
+                alt=""
+                className="mb-3 size-16 rounded-full border-2 border-white/80 bg-white object-contain shadow-elevated md:size-20"
+              />
+            )}
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <FormatBadge format={ev.format} />
               {ev.featured && <FeaturedTag />}
