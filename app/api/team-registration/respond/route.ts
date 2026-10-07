@@ -109,7 +109,7 @@ async function sendConfirmationEmails(registrationId: string, teamName: string) 
   const { data } = await supabaseAdmin
     .from('team_registrations')
     .select(
-      'id, team_name, event:events(name, date, time, location, description), captain:profiles!team_registrations_captain_id_fkey(first_name, last_name, email), partner:profiles!team_registrations_partner_id_fkey(first_name, last_name, email)'
+      'id, team_name, event:events(name, date, time, location, description), captain:profiles!team_registrations_captain_id_fkey(first_name, last_name, email, player_code), partner:profiles!team_registrations_partner_id_fkey(first_name, last_name, email, player_code)'
     )
     .eq('id', registrationId)
     .single<FullRegistrationRaw>()

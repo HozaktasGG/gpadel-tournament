@@ -195,7 +195,7 @@ export default function AdminPage() {
     const { data } = await supabaseBrowser
       .from('team_registrations')
       .select(
-        'id, team_name, status, created_at, captain:profiles!team_registrations_captain_id_fkey(first_name, last_name, email), partner:profiles!team_registrations_partner_id_fkey(first_name, last_name, email), event:events(name)'
+        'id, team_name, status, created_at, captain:profiles!team_registrations_captain_id_fkey(first_name, last_name, email, player_code), partner:profiles!team_registrations_partner_id_fkey(first_name, last_name, email, player_code), event:events(name)'
       )
       .order('created_at', { ascending: false })
 

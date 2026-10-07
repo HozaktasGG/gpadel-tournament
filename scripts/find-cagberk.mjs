@@ -7,7 +7,7 @@ const supabase = createClient(
 
 const { data, error } = await supabase
   .from('profiles')
-  .select('id, first_name, last_name, email')
+  .select('id, first_name, last_name, email, player_code')
   .or('first_name.ilike.%agberk%,first_name.ilike.%ağberk%,last_name.ilike.%agberk%,last_name.ilike.%ağberk%')
 
 if (error) {

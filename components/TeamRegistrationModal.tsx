@@ -73,7 +73,7 @@ export default function TeamRegistrationModal({ eventId, eventName, onClose, onS
     setSearching(true)
     const { data } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name, skill_level, skill_score, avatar_url')
+      .select('id, first_name, last_name, skill_level, skill_score, avatar_url, player_code')
       .eq('player_code', code)
       .maybeSingle<PartnerPreview>()
     setSearching(false)

@@ -101,7 +101,7 @@ export default function TeamInvitePage() {
       const { data, error: fetchError } = await supabase
         .from('team_registrations')
         .select(
-          'id, team_name, status, partner_confirmed, event:events(name, date, location), captain:profiles!team_registrations_captain_id_fkey(first_name, last_name, avatar_url)'
+          'id, team_name, status, partner_confirmed, event:events(name, date, location), captain:profiles!team_registrations_captain_id_fkey(first_name, last_name, avatar_url, player_code)'
         )
         .eq('id', id)
         .single()

@@ -62,7 +62,7 @@ export default function ParticipantsSection({ eventId }: { eventId: string }) {
             first_name,
             last_name,
             skill_score,
-            skill_level
+            skill_level, player_code
           )
         `)
         .eq('event_id', eventId)

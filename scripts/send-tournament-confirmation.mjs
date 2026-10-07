@@ -40,7 +40,7 @@ const memberIds = Array.from(
 
 const { data: profiles, error: profileErr } = await supabase
   .from('profiles')
-  .select('id, first_name, last_name, email')
+  .select('id, first_name, last_name, email, player_code')
   .in('id', memberIds)
 
 if (profileErr) {

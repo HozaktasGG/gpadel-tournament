@@ -11,7 +11,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Profil ve event'i ayrı sorgularla çek
 const { data: profile } = await supabase
   .from('profiles')
-  .select('id, first_name, last_name, email')
+  .select('id, first_name, last_name, email, player_code')
   .eq('email', 'efeozaktas542@gmail.com')
   .single();
 

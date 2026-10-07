@@ -28,7 +28,7 @@ async function alreadyHas(userId, reason) {
 async function main() {
   const { data: profiles, error } = await supabase
     .from('profiles')
-    .select('id, skill_score, quiz_completed_at, last_score_change')
+    .select('id, skill_score, quiz_completed_at, last_score_change, player_code')
 
   if (error) throw error
   if (!profiles?.length) {
