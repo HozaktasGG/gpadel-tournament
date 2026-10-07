@@ -7,7 +7,6 @@ import { createClient } from '@/lib/supabase-client'
 export type NavProfile = {
   first_name: string | null
   last_name: string | null
-  email: string | null
   avatar_url: string | null
   is_admin: boolean | null
   player_code: string | null
@@ -18,6 +17,8 @@ function useSessionState() {
   const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
   const [userId, setUserId] = useState<string | null>(null)
+  // Own email comes from the auth session (profiles.email is not readable via the public API).
+  const [userEmail, setUserEmail] = useState<string | null>(null)
   const [authReady, setAuthReady] = useState(false)
   const [profile, setProfile] = useState<NavProfile | null>(null)
   const [hasLiveTournament, setHasLiveTournament] = useState(false)
@@ -25,10 +26,12 @@ function useSessionState() {
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null)
+      setUserEmail(data.user?.email ?? null)
       setAuthReady(true)
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
       setUserId(session?.user?.id ?? null)
+      setUserEmail(session?.user?.email ?? null)
       setAuthReady(true)
     })
     return () => sub.subscription.unsubscribe()
@@ -41,7 +44,7 @@ function useSessionState() {
     }
     supabase
       .from('profiles')
-      .select('first_name, last_name, email, avatar_url, is_admin, player_code')
+      .select('first_name, last_name, avatar_url, is_admin, player_code')
       .eq('id', userId)
       .maybeSingle()
       .then(({ data }) => setProfile(data as NavProfile | null))
@@ -71,7 +74,7 @@ function useSessionState() {
   }
 
   const displayName =
-    [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() || profile?.email || 'Account'
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() || userEmail || 'Account'
 
   return { userId, authReady, profile, displayName, isAdmin: !!profile?.is_admin, hasLiveTournament, signOut }
 }

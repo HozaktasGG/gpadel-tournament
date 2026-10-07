@@ -21,7 +21,7 @@ export default function RegisterPage() {
   const fetchRegistrations = async () => {
     const { data, error } = await supabase
       .from('tournament_registrations')
-      .select('*')
+      .select('id')
       .eq('email_verified', true)
       .eq('admin_approved', true)
       .order('created_at', { ascending: true })

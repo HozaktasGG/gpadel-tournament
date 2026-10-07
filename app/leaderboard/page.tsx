@@ -9,7 +9,6 @@ type Row = {
   userId: string | null
   firstName: string | null
   lastName: string | null
-  email: string | null
   skillScore: number
   lastScoreChange: number | null
 }
@@ -73,43 +72,35 @@ export default function LeaderboardPage() {
       } = await supabase.auth.getUser()
       setCurrentUserId(user?.id ?? null)
 
-      // Merge profiles + tournament_registrations, dedup by lowercased email
+      // Profiles + legacy quiz entries (de-duplicated by email in the DB function)
       const [{ data: profiles }, { data: regs }] = await Promise.all([
         supabase
           .from('profiles')
-          .select('id, first_name, last_name, email, skill_score, last_score_change, player_code')
+          .select('id, first_name, last_name, skill_score, last_score_change, player_code')
           .not('skill_score', 'is', null)
           .gt('skill_score', 0),
-        supabase
-          .from('tournament_registrations')
-          .select('id, first_name, last_name, email, skill_score, last_score_change')
-          .not('skill_score', 'is', null)
-          .gt('skill_score', 0)
-          .not('quiz_completed_at', 'is', null),
+        supabase.rpc('legacy_leaderboard_entries'),
       ])
 
       const merged = new Map<string, Row>()
       for (const p of profiles ?? []) {
-        const key = (p.email ?? p.id).toLowerCase()
+        const key = p.id
         merged.set(key, {
           key,
           userId: p.id,
           firstName: p.first_name,
           lastName: p.last_name,
-          email: p.email,
           skillScore: p.skill_score ?? 0,
           lastScoreChange: p.last_score_change ?? null,
         })
       }
-      for (const r of regs ?? []) {
-        const key = (r.email ?? r.id).toLowerCase()
-        if (merged.has(key)) continue // profile takes precedence
+      for (const r of (regs ?? []) as { id: string; first_name: string | null; last_name: string | null; skill_score: number | null; last_score_change: number | null }[]) {
+        const key = `legacy:${r.id}`
         merged.set(key, {
           key,
           userId: null,
           firstName: r.first_name,
           lastName: r.last_name,
-          email: r.email,
           skillScore: r.skill_score ?? 0,
           lastScoreChange: r.last_score_change ?? null,
         })

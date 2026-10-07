@@ -19,6 +19,8 @@ export default function ProfilePage() {
   const [score, setScore] = useState<number | null>(null)
   const [quizCompleted, setQuizCompleted] = useState(false)
   const [phone, setPhone] = useState('')
+  // Only send phone on save if we could load it (avoids wiping it on RPC failure).
+  const [phoneLoaded, setPhoneLoaded] = useState(false)
   const [playerCode, setPlayerCode] = useState<string | null>(null)
   const [copiedCode, setCopiedCode] = useState(false)
 
@@ -47,7 +49,7 @@ export default function ProfilePage() {
 
       const { data } = await supabase
         .from('profiles')
-        .select('first_name, last_name, avatar_url, skill_score, quiz_completed_at, phone, player_code')
+        .select('first_name, last_name, avatar_url, skill_score, quiz_completed_at, player_code')
         .eq('id', user.id)
         .maybeSingle()
       if (data) {
@@ -56,8 +58,13 @@ export default function ProfilePage() {
         setAvatarUrl(data.avatar_url ?? null)
         setScore(data.skill_score ?? null)
         setQuizCompleted(!!data.quiz_completed_at)
-        setPhone(data.phone ?? '')
         setPlayerCode(data.player_code ?? null)
+      }
+      // Contact details are not readable via the public API; fetch our own via RPC.
+      const { data: contact, error: contactErr } = await supabase.rpc('get_my_contact').maybeSingle<{ email: string | null; phone: string | null }>()
+      if (!contactErr) {
+        setPhone(contact?.phone ?? '')
+        setPhoneLoaded(true)
       }
       setLoading(false)
     }
@@ -132,7 +139,7 @@ export default function ProfilePage() {
       .update({
         first_name: firstName,
         last_name: lastName,
-        phone: trimmedPhone,
+        ...(phoneLoaded ? { phone: trimmedPhone } : {}),
         updated_at: new Date().toISOString(),
       })
       .eq('id', user.id)

@@ -207,14 +207,19 @@ export default function AdminPage() {
     const memberIds = Array.from(
       new Set(teamRows.flatMap(r => [r.captain_id, r.partner_id]).filter((x): x is string => !!x))
     )
-    const { data: memberData } = memberIds.length
-      ? await supabaseBrowser
-          .from('profiles')
-          .select('id, first_name, last_name, email, player_code')
-          .in('id', memberIds)
-      : { data: [] }
+    const [{ data: memberData }, { data: contactData }] = memberIds.length
+      ? await Promise.all([
+          supabaseBrowser.from('profiles').select('id, first_name, last_name, player_code').in('id', memberIds),
+          // Emails are admin-only (admin_get_contacts checks is_admin).
+          supabaseBrowser.rpc('admin_get_contacts', { ids: memberIds }),
+        ])
+      : [{ data: [] }, { data: [] }]
+    const emailById = new Map(((contactData ?? []) as { id: string; email: string | null }[]).map(c => [c.id, c.email]))
     const memberById = new Map(
-      ((memberData ?? []) as (TeamMemberEmbed & { id: string })[]).map(p => [p.id, p])
+      ((memberData ?? []) as (Omit<TeamMemberEmbed, 'email'> & { id: string })[]).map(p => [
+        p.id,
+        { ...p, email: emailById.get(p.id) ?? null } as TeamMemberEmbed & { id: string },
+      ])
     )
 
     const rows = teamRows
