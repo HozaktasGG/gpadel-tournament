@@ -29,7 +29,7 @@ function VerifyContent() {
   }, [token])
 
   return (
-    <main className="min-h-dvh bg-white flex items-center justify-center p-6">
+    <main className="min-h-dvh bg-background flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center">
         <div className="flex justify-center mb-8">
           <img
@@ -42,14 +42,14 @@ function VerifyContent() {
         </div>
 
         {status === 'loading' && (
-          <p className="text-sm text-gray-500">Verifying your email...</p>
+          <p className="text-sm text-subtle">Verifying your email...</p>
         )}
 
         {status === 'success' && (
           <div>
-            <p className="text-xl font-bold text-black mb-3">Email Verified!</p>
-            <p className="text-sm text-gray-600">Your registration is pending admin approval. You will be added to the participants list once approved.</p>
-            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff6b35' }}>
+            <p className="text-xl font-bold text-foreground mb-3">Email Verified!</p>
+            <p className="text-sm text-muted-foreground">Your registration is pending admin approval. You will be added to the participants list once approved.</p>
+            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff8a5c' }}>
               Back to Tournament Page
             </a>
           </div>
@@ -57,9 +57,9 @@ function VerifyContent() {
 
         {status === 'error' && (
           <div>
-            <p className="text-xl font-bold text-red-600 mb-3">Verification Failed</p>
-            <p className="text-sm text-gray-600">This link is invalid or has already been used.</p>
-            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff6b35' }}>
+            <p className="text-xl font-bold text-destructive mb-3">Verification Failed</p>
+            <p className="text-sm text-muted-foreground">This link is invalid or has already been used.</p>
+            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff8a5c' }}>
               Back to Tournament Page
             </a>
           </div>
@@ -72,8 +72,8 @@ function VerifyContent() {
 export default function VerifyPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-dvh bg-white flex items-center justify-center">
-        <p className="text-sm text-gray-500">Loading...</p>
+      <main className="min-h-dvh bg-background flex items-center justify-center">
+        <p className="text-sm text-subtle">Loading...</p>
       </main>
     }>
       <VerifyContent />

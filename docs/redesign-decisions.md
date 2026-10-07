@@ -46,3 +46,10 @@ One line per non-trivial decision. Mockups: `design/01–04`.
 - Sign in / sign up / account setup share `components/auth/auth-shell.tsx` (court photo, card, Google button); Supabase auth calls unchanged.
 - The old "Forgot password?" link pointed to a non-existent `/forgot-password` route (404), so it was removed; a reset flow would be new auth logic.
 - `/signin?error=admin_required` now shows a short "organizers only" message (UI text only).
+
+## Remaining pages
+- Leaderboard keeps "first name + last initial" masking and its ranking logic; adds `avatar_url` to the column list.
+- Legacy April-flow pages (/register, /verify, /cancel, /ticket, /participants) re-themed by a styling-only codemod (colors, headings, orange buttons with dark text); their logic is untouched.
+- Phones get a compact footer (social + privacy); full footer on desktop. Mockups show no footer on phones.
+- New `app/not-found.tsx`, `app/error.tsx` and route `loading.tsx` skeletons.
+- About copy: "Pro badge" corrected to "Advanced" (the highest level that exists).

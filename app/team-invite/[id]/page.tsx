@@ -3,12 +3,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { CalendarDays, CheckCircle2, Clock, Hand, Loader2, MapPin, PartyPopper, SearchX, XCircle } from 'lucide-react'
+import { Avatar } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
 import { createClient } from '@/lib/supabase-client'
 
 type CaptainEmbed = {
   first_name: string | null
   last_name: string | null
   avatar_url: string | null
+  player_code?: string | null
 }
 
 type EventEmbed = {
@@ -154,162 +160,140 @@ export default function TeamInvitePage() {
 
   if (loading) {
     return (
-      <main className="min-h-dvh flex items-center justify-center bg-[#0f2318]">
-        <div
-          className="w-10 h-10 border-4 rounded-full animate-spin"
-          style={{ borderColor: '#2d5a40', borderTopColor: '#ff6b35' }}
-        />
+      <main className="mx-auto w-full max-w-md flex-1 space-y-4 px-4 py-10" aria-busy="true">
+        <Skeleton className="h-8 w-1/2" />
+        <Skeleton className="h-80 w-full rounded-2xl" />
       </main>
     )
   }
 
   if (error && !registration) {
-    return (
-      <main className="min-h-dvh flex items-center justify-center px-4 bg-[#0f2318]">
-        <div className="max-w-md w-full rounded-2xl p-8 text-center bg-[#1a3d2e] border border-[#2d5a40]">
-          <div className="text-5xl mb-4">😕</div>
-          <h1 className="text-xl font-bold text-white mb-2">Invite Not Found</h1>
-          <p className="text-sm text-white/70 mb-6">{error}</p>
-          <Link href="/" className="inline-block px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35]">
-            Home
-          </Link>
-        </div>
-      </main>
-    )
+    return <StatusCard icon={SearchX} title="Invite not found" text={error} href="/" cta="Home" />
   }
 
   if (result === 'accepted') {
     return (
-      <main className="min-h-dvh flex items-center justify-center px-4 bg-[#0f2318]">
-        <div className="max-w-md w-full rounded-2xl p-8 text-center bg-[#1a3d2e] border border-[#2d5a40]">
-          <div className="text-6xl mb-4">🎉</div>
-          <h1 className="text-2xl font-bold text-white mb-2">You Accepted the Invite!</h1>
-          <p className="text-sm text-white/80 mb-6">
-            You joined <strong className="text-[#ff6b35]">&quot;{registration?.team_name}&quot;</strong>. See you at the tournament! 🎾
-          </p>
-          <Link href="/dashboard" className="inline-block px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35]">
-            Go to Dashboard
-          </Link>
-        </div>
-      </main>
+      <StatusCard
+        icon={PartyPopper}
+        tone="success"
+        title="You accepted the invite!"
+        text={<>You joined <strong className="text-foreground">“{registration?.team_name}”</strong>. See you at the tournament!</>}
+        href="/dashboard"
+        cta="Go to dashboard"
+      />
     )
   }
 
   if (result === 'rejected') {
-    return (
-      <main className="min-h-dvh flex items-center justify-center px-4 bg-[#0f2318]">
-        <div className="max-w-md w-full rounded-2xl p-8 text-center bg-[#1a3d2e] border border-[#2d5a40]">
-          <div className="text-6xl mb-4">👋</div>
-          <h1 className="text-2xl font-bold text-white mb-2">Invite Declined</h1>
-          <p className="text-sm text-white/80 mb-6">You declined the invite. The captain has been notified.</p>
-          <Link href="/" className="inline-block px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35]">
-            Home
-          </Link>
-        </div>
-      </main>
-    )
+    return <StatusCard icon={Hand} title="Invite declined" text="You declined the invite. The captain has been notified." href="/" cta="Home" />
   }
 
   if (!registration) return null
 
   if (registration.status !== 'pending_partner') {
     const info = {
-      pending_approval: { emoji: '⏳', title: 'Awaiting Approval', text: 'You already responded to this invite. Awaiting admin approval.' },
-      approved: { emoji: '✅', title: 'Team Approved', text: 'This team is already approved.' },
-      rejected: { emoji: '❌', title: 'Invite Declined', text: 'This invite has been declined.' },
+      pending_approval: { icon: Clock, title: 'Awaiting approval', text: 'You already responded to this invite. Awaiting admin approval.', tone: undefined },
+      approved: { icon: CheckCircle2, title: 'Team approved', text: 'This team is already approved.', tone: 'success' as const },
+      rejected: { icon: XCircle, title: 'Invite declined', text: 'This invite has been declined.', tone: undefined },
     }[registration.status]
 
-    return (
-      <main className="min-h-dvh flex items-center justify-center px-4 bg-[#0f2318]">
-        <div className="max-w-md w-full rounded-2xl p-8 text-center bg-[#1a3d2e] border border-[#2d5a40]">
-          <div className="text-6xl mb-4">{info.emoji}</div>
-          <h1 className="text-2xl font-bold text-white mb-2">{info.title}</h1>
-          <p className="text-sm text-white/80 mb-6">{info.text}</p>
-          <Link href="/dashboard" className="inline-block px-6 py-3 rounded-xl text-sm font-bold text-white bg-[#ff6b35]">
-            Go to Dashboard
-          </Link>
-        </div>
-      </main>
-    )
+    return <StatusCard icon={info.icon} tone={info.tone} title={info.title} text={info.text} href="/dashboard" cta="Go to dashboard" />
   }
 
   const captain = registration.captain
   const captainName = [captain?.first_name, captain?.last_name].filter(Boolean).join(' ').trim() || 'A player'
-  const captainInitial = (captain?.first_name?.[0] ?? '?').toUpperCase()
   const event = registration.event
 
   return (
-    <main className="min-h-dvh py-10 px-4 bg-[#0f2318]">
-      <div className="max-w-md mx-auto">
-        <div className="rounded-2xl overflow-hidden bg-[#1a3d2e] border border-[#2d5a40]">
-          <div className="px-6 py-5 text-center bg-[#0f2318]" style={{ borderBottom: '3px solid #ff6b35' }}>
-            <p className="text-xs font-bold uppercase tracking-widest text-[#ff6b35]">🎾 Team Invite</p>
-            <h1 className="text-xl font-bold text-white mt-2">You have an invite!</h1>
-          </div>
+    <main className="mx-auto w-full max-w-md flex-1 px-4 pb-10 pt-6 md:pt-10">
+      <p className="flex items-center gap-2 font-display text-xl font-semibold">
+        <span className="size-2.5 rounded-full bg-primary" aria-hidden />
+        Partner invite
+      </p>
+      <h1 className="mt-1 font-display text-[40px] font-bold leading-none">You have an invite!</h1>
 
-          <div className="p-6">
-            <div className="flex items-center gap-4 mb-5">
-              {captain?.avatar_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={captain.avatar_url}
-                  alt={captainName}
-                  width={56}
-                  height={56}
-                  className="rounded-full object-cover"
-                  style={{ width: 56, height: 56 }}
-                />
-              ) : (
-                <span
-                  className="flex items-center justify-center rounded-full text-xl font-bold text-white bg-[#ff6b35]"
-                  style={{ width: 56, height: 56 }}
-                >
-                  {captainInitial}
-                </span>
-              )}
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-white/60 uppercase tracking-wide font-semibold">Captain</p>
-                <p className="text-base font-bold text-white truncate">{captainName}</p>
-              </div>
-            </div>
-
-            <div className="rounded-xl p-4 mb-4 bg-[#0f2318] border border-[#2d5a40]">
-              <p className="text-xs text-white/60 uppercase tracking-wide font-semibold mb-1">Team Name</p>
-              <p className="text-2xl font-bold text-[#ff6b35]">{registration.team_name}</p>
-            </div>
-
-            {event && (
-              <div className="rounded-xl p-4 mb-6 bg-[#0f2318] border border-[#2d5a40]">
-                <p className="text-xs text-white/60 uppercase tracking-wide font-semibold mb-2">Event</p>
-                <p className="text-base font-bold text-white mb-2">{event.name}</p>
-                {event.date && <p className="text-xs text-white/80">📅 {formatDate(event.date)}</p>}
-                {event.location && <p className="text-xs text-white/80 mt-1">📍 {event.location}</p>}
-              </div>
-            )}
-
-            {error && <p className="text-xs text-red-300 mb-3 text-center">{error}</p>}
-
-            <div className="space-y-2.5">
-              <button
-                type="button"
-                onClick={() => handleRespond('accept')}
-                disabled={responding}
-                className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition disabled:opacity-50 bg-[#ff6b35]"
-              >
-                {responding ? 'Processing...' : '✅ Accept Invite'}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRespond('reject')}
-                disabled={responding}
-                className="w-full py-3.5 rounded-xl text-sm font-bold text-white/80 transition disabled:opacity-50 bg-transparent border border-[#2d5a40]"
-              >
-                Decline
-              </button>
-            </div>
+      <Card className="mt-5 p-5">
+        <div className="flex items-center gap-4">
+          <Avatar src={captain?.avatar_url} name={captainName} size="lg" />
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground">
+              <span className="text-foreground">{captainName}</span> wants to team up
+            </p>
+            {captain?.player_code && <p className="text-xs text-subtle">{captain.player_code}</p>}
           </div>
         </div>
-      </div>
+
+        <div className="mt-4 rounded-xl border border-border bg-pitch-850 p-4">
+          <p className="text-overline font-semibold uppercase text-subtle">Team name</p>
+          <p className="mt-1 font-display text-[26px] font-bold leading-tight text-primary-text">{registration.team_name}</p>
+        </div>
+
+        {event && (
+          <div className="mt-3 rounded-xl border border-border bg-pitch-850 p-4">
+            <p className="text-overline font-semibold uppercase text-subtle">Event</p>
+            <p className="mt-1 font-display text-xl font-semibold leading-tight">{event.name}</p>
+            {event.date && (
+              <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                <CalendarDays className="size-4" aria-hidden />
+                {formatDate(event.date)}
+              </p>
+            )}
+            {event.location && (
+              <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="size-4" aria-hidden />
+                {event.location}
+              </p>
+            )}
+          </div>
+        )}
+
+        {error && (
+          <p role="alert" className="mt-3 rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            {error}
+          </p>
+        )}
+
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <Button variant="secondary" size="lg" onClick={() => handleRespond('reject')} disabled={responding}>
+            Decline
+          </Button>
+          <Button size="lg" onClick={() => handleRespond('accept')} disabled={responding}>
+            {responding && <Loader2 className="animate-spin" />}
+            {responding ? 'Processing…' : 'Accept'}
+          </Button>
+        </div>
+      </Card>
+    </main>
+  )
+}
+
+function StatusCard({
+  icon: Icon,
+  title,
+  text,
+  href,
+  cta,
+  tone,
+}: {
+  icon: typeof Clock
+  title: string
+  text: React.ReactNode
+  href: string
+  cta: string
+  tone?: 'success'
+}) {
+  return (
+    <main className="mx-auto flex w-full max-w-md flex-1 items-center px-4 py-10">
+      <Card className="w-full p-8 text-center">
+        <span className={`mx-auto flex size-14 items-center justify-center rounded-full ${tone === 'success' ? 'bg-success/15 text-success' : 'bg-white/5 text-muted-foreground'}`}>
+          <Icon className="size-7" aria-hidden />
+        </span>
+        <h1 className="mt-4 font-display text-[28px] font-bold leading-tight">{title}</h1>
+        <p className="mt-2 text-[15px] text-muted-foreground">{text}</p>
+        <Button asChild size="lg" className="mt-6">
+          <Link href={href}>{cta}</Link>
+        </Button>
+      </Card>
     </main>
   )
 }

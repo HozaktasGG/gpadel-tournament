@@ -45,7 +45,7 @@ function ParticipantsContent() {
   }, [token])
 
   return (
-    <main className="min-h-dvh bg-white p-6 sm:p-12">
+    <main className="min-h-dvh bg-background p-6 sm:p-12">
       <div className="max-w-md mx-auto">
         <div className="flex justify-center mb-10">
           <img
@@ -58,13 +58,13 @@ function ParticipantsContent() {
         </div>
 
         {status === 'loading' && (
-          <p className="text-sm text-gray-500 text-center">Loading participants...</p>
+          <p className="text-sm text-subtle text-center">Loading participants...</p>
         )}
 
         {status === 'error' && (
           <div className="text-center">
-            <p className="text-sm text-gray-700">{errorMsg}</p>
-            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff6b35' }}>
+            <p className="text-sm text-foreground/85">{errorMsg}</p>
+            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff8a5c' }}>
               Back to Tournament Page
             </a>
           </div>
@@ -72,17 +72,17 @@ function ParticipantsContent() {
 
         {status === 'success' && (
           <div>
-            <h1 className="text-2xl font-bold text-black mb-1">Participants</h1>
-            <p className="text-sm text-gray-500 mb-6">GPadel Tournament — April 24, 2026</p>
+            <h1 className="font-display text-2xl font-bold text-foreground mb-1">Participants</h1>
+            <p className="text-sm text-subtle mb-6">GPadel Tournament — April 24, 2026</p>
             <ol className="space-y-2">
               {participants.map((p, i) => (
-                <li key={p.id} className="text-base font-semibold text-black">
+                <li key={p.id} className="text-base font-semibold text-foreground">
                   {i + 1}. {p.first_name} {p.last_name}
                 </li>
               ))}
             </ol>
             <div className="mt-8">
-              <a href="/" className="text-sm text-gray-400 underline">Back to Tournament Page</a>
+              <a href="/" className="text-sm text-subtle underline">Back to Tournament Page</a>
             </div>
           </div>
         )}
@@ -94,8 +94,8 @@ function ParticipantsContent() {
 export default function ParticipantsPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-dvh bg-white flex items-center justify-center">
-        <p className="text-sm text-gray-500">Loading...</p>
+      <main className="min-h-dvh bg-background flex items-center justify-center">
+        <p className="text-sm text-subtle">Loading...</p>
       </main>
     }>
       <ParticipantsContent />

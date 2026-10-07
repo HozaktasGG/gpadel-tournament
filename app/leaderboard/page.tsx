@@ -1,66 +1,50 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { ClipboardList, Trophy } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
-import { getLevel, getLevelColor } from '@/lib/quiz-questions'
+import { getLevel } from '@/lib/quiz-questions'
+import { cn } from '@/lib/utils'
+import { Avatar } from '@/components/ui/avatar'
+import { SkillBadge } from '@/components/ui/badge'
+import { RankMedal } from '@/components/ui/player-row'
+import { Card } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { PlayerRowSkeleton } from '@/components/ui/skeleton'
+import { FadeUpItem, Stagger } from '@/components/motion'
 
 type Row = {
   key: string
   userId: string | null
+  avatarUrl: string | null
   firstName: string | null
   lastName: string | null
   skillScore: number
   lastScoreChange: number | null
 }
 
-function rankStyle(rank: number): { bg: string; text: string; medal: string } {
-  if (rank === 1)
-    return {
-      bg: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-      text: '#422006',
-      medal: '🥇',
-    }
-  if (rank === 2)
-    return {
-      bg: 'linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%)',
-      text: '#1e293b',
-      medal: '🥈',
-    }
-  if (rank === 3)
-    return {
-      bg: 'linear-gradient(135deg, #d6966b 0%, #a16207 100%)',
-      text: '#fff7ed',
-      medal: '🥉',
-    }
-  return { bg: '', text: '#fff', medal: '' }
-}
-
+// Public list: first name + last initial (unchanged privacy rule).
 function maskName(first: string | null, last: string | null) {
   const f = first ?? ''
   const l = last ? last.charAt(0) + '.' : ''
   return `${f} ${l}`.trim() || 'Player'
 }
 
-function ChangePill({ change }: { change: number | null | undefined }) {
+function Change({ change }: { change: number | null | undefined }) {
   if (change == null || change === 0) return null
-  const positive = change > 0
+  const up = change > 0
   return (
-    <span
-      className="inline-block px-2 py-0.5 rounded-full text-[10px] font-bold"
-      style={{
-        backgroundColor: positive ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-        color: positive ? '#22c55e' : '#f87171',
-        border: `1px solid ${positive ? 'rgba(34,197,94,0.35)' : 'rgba(239,68,68,0.35)'}`,
-      }}
-    >
-      {positive ? '▲' : '▼'} {positive ? '+' : ''}
+    <span className={cn('text-xs font-semibold tabular', up ? 'text-success' : 'text-destructive')} aria-label={`Last change ${up ? '+' : ''}${change}`}>
+      {up ? '▲ +' : '▼ '}
       {change}
     </span>
   )
 }
 
 export default function LeaderboardPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(true)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
@@ -76,7 +60,7 @@ export default function LeaderboardPage() {
       const [{ data: profiles }, { data: regs }] = await Promise.all([
         supabase
           .from('profiles')
-          .select('id, first_name, last_name, skill_score, last_score_change, player_code')
+          .select('id, first_name, last_name, avatar_url, skill_score, last_score_change, player_code')
           .not('skill_score', 'is', null)
           .gt('skill_score', 0),
         supabase.rpc('legacy_leaderboard_entries'),
@@ -88,6 +72,7 @@ export default function LeaderboardPage() {
         merged.set(key, {
           key,
           userId: p.id,
+          avatarUrl: p.avatar_url ?? null,
           firstName: p.first_name,
           lastName: p.last_name,
           skillScore: p.skill_score ?? 0,
@@ -99,6 +84,7 @@ export default function LeaderboardPage() {
         merged.set(key, {
           key,
           userId: null,
+          avatarUrl: null,
           firstName: r.first_name,
           lastName: r.last_name,
           skillScore: r.skill_score ?? 0,
@@ -115,195 +101,71 @@ export default function LeaderboardPage() {
     load()
   }, [supabase])
 
-  const myRank = currentUserId
-    ? rows.findIndex(r => r.userId === currentUserId) + 1
-    : 0
+  const myRank = currentUserId ? rows.findIndex(r => r.userId === currentUserId) + 1 : 0
 
   return (
-    <main
-      className="flex-1 py-10 px-4 sm:py-14"
-      style={{ backgroundColor: '#1a3d2e' }}
-    >
-      <div className="max-w-2xl mx-auto">
-        <div className="text-center mb-8">
-          <p
-            className="text-xs tracking-[0.3em] uppercase font-semibold mb-2"
-            style={{ color: '#ff6b35' }}
-          >
-            SmashTorino
-          </p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-white">
-            🏆 Leaderboard
-          </h1>
-          <p className="text-sm text-white/60 mt-2">
-            Padel skill rankings — top players first
-          </p>
-          {myRank > 0 && (
-            <p className="text-xs text-white/80 mt-3">
-              Your rank:{' '}
-              <span className="font-bold" style={{ color: '#ff6b35' }}>
-                #{myRank}
-              </span>
-            </p>
-          )}
-        </div>
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-10 pt-6 md:pt-10">
+      <p className="text-overline font-semibold uppercase text-muted-foreground">Turin padel community</p>
+      <h1 className="mt-1 font-display text-[40px] font-bold leading-none md:text-hero">Leaderboard</h1>
+      <p className="mt-2 text-[17px] text-foreground/80">Skill ratings — top players first.</p>
+      {myRank > 0 && (
+        <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm text-primary-text">
+          <Trophy className="size-4" aria-hidden />
+          You are #{myRank} of {rows.length}
+        </p>
+      )}
 
+      <div className="mt-6">
         {loading ? (
-          <p className="text-center text-sm text-white/60">Loading rankings...</p>
+          <div className="space-y-2">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <PlayerRowSkeleton key={i} />
+            ))}
+          </div>
         ) : rows.length === 0 ? (
-          <div
-            className="rounded-2xl p-8 text-center"
-            style={{
-              backgroundColor: '#0f2a1f',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}
-          >
-            <p className="text-sm text-white/70">
-              No one has completed the quiz yet. Be the first!
-            </p>
-          </div>
+          <EmptyState
+            icon={ClipboardList}
+            title="No rankings yet"
+            description="Take the skill quiz to get your first rating."
+            action={
+              <Button asChild>
+                <Link href="/quiz">Take the quiz</Link>
+              </Button>
+            }
+          />
         ) : (
-          <div className="space-y-3">
-            {/* Podium: top 3 */}
-            {rows.slice(0, 3).length > 0 && (
-              <div className="mb-2">
-                {rows.slice(0, 3).map((row, idx) => {
-                  const rank = idx + 1
-                  const style = rankStyle(rank)
-                  const levelName = getLevel(row.skillScore)
-                  const levelColor = getLevelColor(levelName)
-                  const isMe =
-                    currentUserId != null && row.userId === currentUserId
-                  return (
+          <Card className="overflow-hidden">
+            <Stagger as="ol">
+              {rows.map((row, i) => {
+                const rank = i + 1
+                const me = currentUserId != null && row.userId === currentUserId
+                const name = maskName(row.firstName, row.lastName)
+                return (
+                  <FadeUpItem as="li" key={row.key}>
                     <div
-                      key={row.key}
-                      className="rounded-2xl p-4 sm:p-5 mb-3 flex items-center gap-4 shadow-xl"
-                      style={{
-                        background: style.bg,
-                        border: isMe
-                          ? '2px solid #ff6b35'
-                          : '1px solid rgba(255,255,255,0.15)',
-                      }}
+                      className={cn(
+                        'flex min-h-[64px] items-center gap-3 border-b border-border px-3 py-2 last:border-0',
+                        me && 'bg-primary/10'
+                      )}
+                      aria-current={me ? 'true' : undefined}
                     >
-                      <div className="flex-shrink-0 text-3xl sm:text-4xl">
-                        {style.medal}
+                      <RankMedal rank={rank} />
+                      <Avatar src={row.avatarUrl} name={name} size="md" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-display text-[17px] font-semibold leading-tight">
+                          {name}
+                          {me && <span className="ml-2 font-sans text-xs font-medium text-primary-text">You</span>}
+                        </p>
+                        <Change change={row.lastScoreChange} />
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className="text-xs font-bold tracking-wider uppercase opacity-70"
-                          style={{ color: style.text }}
-                        >
-                          Rank #{rank} {isMe && '· You'}
-                        </p>
-                        <p
-                          className="text-lg sm:text-xl font-bold truncate"
-                          style={{ color: style.text }}
-                        >
-                          {maskName(row.firstName, row.lastName)}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                          <div
-                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold"
-                            style={{
-                              background: levelColor.bg,
-                              color: levelColor.text,
-                            }}
-                          >
-                            {levelColor.icon && <span>{levelColor.icon}</span>}
-                            <span>{levelName}</span>
-                          </div>
-                          <ChangePill change={row.lastScoreChange} />
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p
-                          className="text-2xl sm:text-3xl font-bold leading-none"
-                          style={{ color: style.text }}
-                        >
-                          {row.skillScore}
-                        </p>
-                        <p
-                          className="text-[10px] font-semibold opacity-60 mt-1"
-                          style={{ color: style.text }}
-                        >
-                          pts
-                        </p>
-                      </div>
+                      <SkillBadge level={getLevel(row.skillScore)} />
+                      <span className="w-12 text-right font-display text-lg font-semibold tabular">{row.skillScore}</span>
                     </div>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* Rest */}
-            {rows.length > 3 && (
-              <div
-                className="rounded-2xl overflow-hidden"
-                style={{
-                  backgroundColor: '#0f2a1f',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                }}
-              >
-                {rows.slice(3).map((row, idx) => {
-                  const rank = idx + 4
-                  const levelName = getLevel(row.skillScore)
-                  const levelColor = getLevelColor(levelName)
-                  const isMe =
-                    currentUserId != null && row.userId === currentUserId
-                  return (
-                    <div
-                      key={row.key}
-                      className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 border-b last:border-b-0"
-                      style={{
-                        borderColor: 'rgba(255,255,255,0.06)',
-                        backgroundColor: isMe
-                          ? 'rgba(255,107,53,0.08)'
-                          : 'transparent',
-                      }}
-                    >
-                      <div className="flex-shrink-0 w-8 text-center text-sm font-bold text-white/60">
-                        {rank}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">
-                          {maskName(row.firstName, row.lastName)}
-                          {isMe && (
-                            <span
-                              className="ml-2 text-[10px] font-bold"
-                              style={{ color: '#ff6b35' }}
-                            >
-                              · You
-                            </span>
-                          )}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                          <div
-                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold"
-                            style={{
-                              background: levelColor.bg,
-                              color: levelColor.text,
-                            }}
-                          >
-                            {levelColor.icon && <span>{levelColor.icon}</span>}
-                            <span>{levelName}</span>
-                          </div>
-                          <ChangePill change={row.lastScoreChange} />
-                        </div>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="text-lg font-bold text-white leading-none">
-                          {row.skillScore}
-                        </p>
-                        <p className="text-[10px] text-white/40 font-semibold mt-1">
-                          pts
-                        </p>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+                  </FadeUpItem>
+                )
+              })}
+            </Stagger>
+          </Card>
         )}
       </div>
     </main>

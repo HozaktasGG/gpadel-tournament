@@ -47,7 +47,7 @@ function CancelContent() {
   }
 
   return (
-    <main className="min-h-dvh bg-white flex items-center justify-center p-6">
+    <main className="min-h-dvh bg-background flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center">
         <div className="flex justify-center mb-8">
           <img
@@ -61,8 +61,8 @@ function CancelContent() {
 
         {status === 'idle' && token && (
           <div>
-            <p className="text-xl font-bold text-black mb-3">Cancel Registration</p>
-            <p className="text-sm text-gray-600 mb-8">Are you sure you want to cancel your registration for the GPadel Tournament?</p>
+            <p className="text-xl font-bold text-foreground mb-3">Cancel Registration</p>
+            <p className="text-sm text-muted-foreground mb-8">Are you sure you want to cancel your registration for the GPadel Tournament?</p>
             <button
               onClick={handleCancel}
               className="px-6 py-2.5 text-sm font-semibold text-white rounded"
@@ -71,20 +71,20 @@ function CancelContent() {
               Yes, Cancel My Registration
             </button>
             <div className="mt-4">
-              <a href="/" className="text-sm text-gray-500 underline">Keep my registration</a>
+              <a href="/" className="text-sm text-subtle underline">Keep my registration</a>
             </div>
           </div>
         )}
 
         {status === 'loading' && (
-          <p className="text-sm text-gray-500">Cancelling your registration...</p>
+          <p className="text-sm text-subtle">Cancelling your registration...</p>
         )}
 
         {status === 'success' && (
           <div>
-            <p className="text-xl font-bold text-black mb-3">Registration Cancelled</p>
-            <p className="text-sm text-gray-600">Your registration has been cancelled successfully.</p>
-            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff6b35' }}>
+            <p className="text-xl font-bold text-foreground mb-3">Registration Cancelled</p>
+            <p className="text-sm text-muted-foreground">Your registration has been cancelled successfully.</p>
+            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff8a5c' }}>
               Back to Tournament Page
             </a>
           </div>
@@ -92,9 +92,9 @@ function CancelContent() {
 
         {status === 'deadline' && (
           <div>
-            <p className="text-xl font-bold text-black mb-3">Cancellation Unavailable</p>
-            <p className="text-sm text-gray-600">Cancellation is no longer available. You can only cancel up to 24 hours before the tournament.</p>
-            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff6b35' }}>
+            <p className="text-xl font-bold text-foreground mb-3">Cancellation Unavailable</p>
+            <p className="text-sm text-muted-foreground">Cancellation is no longer available. You can only cancel up to 24 hours before the tournament.</p>
+            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff8a5c' }}>
               Back to Tournament Page
             </a>
           </div>
@@ -102,9 +102,9 @@ function CancelContent() {
 
         {status === 'error' && (
           <div>
-            <p className="text-xl font-bold text-red-600 mb-3">Error</p>
-            <p className="text-sm text-gray-600">{errorMsg || 'Invalid or expired cancellation link.'}</p>
-            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff6b35' }}>
+            <p className="text-xl font-bold text-destructive mb-3">Error</p>
+            <p className="text-sm text-muted-foreground">{errorMsg || 'Invalid or expired cancellation link.'}</p>
+            <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff8a5c' }}>
               Back to Tournament Page
             </a>
           </div>
@@ -117,8 +117,8 @@ function CancelContent() {
 export default function CancelPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-dvh bg-white flex items-center justify-center">
-        <p className="text-sm text-gray-500">Loading...</p>
+      <main className="min-h-dvh bg-background flex items-center justify-center">
+        <p className="text-sm text-subtle">Loading...</p>
       </main>
     }>
       <CancelContent />

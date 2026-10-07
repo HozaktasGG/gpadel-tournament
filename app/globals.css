@@ -65,6 +65,15 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /* Bare form controls on older pages get the token surface (utilities still override). */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea {
+    background-color: rgb(var(--secondary));
+    border-color: rgb(255 255 255 / 0.14);
+    color: rgb(var(--foreground));
+  }
+
   /* iOS: our own :active states replace the grey tap flash. */
   html {
     -webkit-tap-highlight-color: transparent;

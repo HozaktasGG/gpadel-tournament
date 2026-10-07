@@ -57,7 +57,7 @@ function TicketContent() {
 
   if (status === 'loading') {
     return (
-      <main className="min-h-dvh flex items-center justify-center" style={{ backgroundColor: '#1a3d2e' }}>
+      <main className="min-h-dvh flex items-center justify-center" style={{ backgroundColor: 'rgb(10 31 25)' }}>
         <p className="text-sm text-white/70">Loading ticket...</p>
       </main>
     )
@@ -65,14 +65,14 @@ function TicketContent() {
 
   if (status === 'error' || !ticket) {
     return (
-      <main className="min-h-dvh flex items-center justify-center p-6" style={{ backgroundColor: '#1a3d2e' }}>
+      <main className="min-h-dvh flex items-center justify-center p-6" style={{ backgroundColor: 'rgb(10 31 25)' }}>
         <div className="max-w-md w-full text-center">
           <div className="flex justify-center mb-8">
             <img src="/smashpadel_logo.png" alt="Smash Padel" width={80} height={80} className="rounded-full" />
           </div>
           <p className="text-xl font-bold text-white mb-3">Ticket Not Available</p>
           <p className="text-sm text-white/70">{errorMsg}</p>
-          <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff6b35' }}>
+          <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff8a5c' }}>
             Back to Tournament Page
           </a>
         </div>
@@ -84,7 +84,7 @@ function TicketContent() {
   const showSaveHelp = () => setSaveHelpOpen(true)
 
   return (
-    <main className="min-h-dvh py-8 px-4 sm:py-12" style={{ backgroundColor: '#1a3d2e' }}>
+    <main className="min-h-dvh py-8 px-4 sm:py-12" style={{ backgroundColor: 'rgb(10 31 25)' }}>
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="flex flex-col items-center mb-6">
@@ -101,14 +101,14 @@ function TicketContent() {
         {/* Ticket card */}
         <div
           className="rounded-3xl overflow-hidden shadow-2xl"
-          style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
+          style={{ backgroundColor: 'rgb(13 38 32)', border: '1px solid rgba(255,255,255,0.08)' }}
         >
           {/* Top banner */}
           <div className="px-6 pt-7 pb-6 text-center" style={{ background: 'linear-gradient(180deg, #204a38 0%, #0f2a1f 100%)' }}>
-            <p className="text-xs tracking-[0.25em] uppercase font-semibold" style={{ color: '#ff6b35' }}>Event Ticket</p>
-            <h1 className="text-2xl font-bold text-white mt-2">GPadel Tournament</h1>
+            <p className="text-xs tracking-[0.25em] uppercase font-semibold" style={{ color: '#ff8a5c' }}>Event Ticket</p>
+            <h1 className="font-display text-2xl font-bold text-white mt-2">GPadel Tournament</h1>
             {ticket.checkedIn && (
-              <div className="mt-3 inline-block px-3 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: '#ff6b35', color: '#fff' }}>
+              <div className="mt-3 inline-block px-3 py-1 rounded-full text-xs font-semibold" style={{ backgroundColor: '#ff6b35', color: '#1a0b05' }}>
                 ✓ Checked In
               </div>
             )}
@@ -137,9 +137,9 @@ function TicketContent() {
           </div>
 
           {/* Perforated divider */}
-          <div className="relative h-6" style={{ backgroundColor: '#0f2a1f' }}>
-            <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full" style={{ backgroundColor: '#1a3d2e' }}></div>
-            <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full" style={{ backgroundColor: '#1a3d2e' }}></div>
+          <div className="relative h-6" style={{ backgroundColor: 'rgb(13 38 32)' }}>
+            <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full" style={{ backgroundColor: 'rgb(10 31 25)' }}></div>
+            <div className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full" style={{ backgroundColor: 'rgb(10 31 25)' }}></div>
             <div
               className="absolute left-6 right-6 top-1/2 -translate-y-1/2 border-t border-dashed"
               style={{ borderColor: 'rgba(255,255,255,0.2)' }}
@@ -147,17 +147,17 @@ function TicketContent() {
           </div>
 
           {/* QR code */}
-          <div className="px-6 py-6 bg-white flex flex-col items-center">
+          <div className="px-6 py-6 bg-background flex flex-col items-center">
             <img
               src={ticket.qr}
               alt="Ticket QR code"
               className="w-56 h-56 sm:w-64 sm:h-64"
               style={{ imageRendering: 'pixelated' }}
             />
-            <p className="mt-4 text-xs font-medium text-gray-600 text-center">
+            <p className="mt-4 text-xs font-medium text-muted-foreground text-center">
               Show this QR code at the entrance
             </p>
-            <p className="mt-1 text-[10px] tracking-[0.2em] uppercase text-gray-400">
+            <p className="mt-1 text-[10px] tracking-[0.2em] uppercase text-subtle">
               ID: {ticket.id}
             </p>
           </div>
@@ -167,7 +167,7 @@ function TicketContent() {
         <div className="mt-6 space-y-3">
           <a
             href={walletUrl}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold text-white"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold text-primary-foreground"
             style={{ backgroundColor: '#ff6b35' }}
           >
             <span style={{ fontSize: 16 }}>📅</span>
@@ -176,7 +176,7 @@ function TicketContent() {
           <button
             onClick={showSaveHelp}
             className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-semibold text-white"
-            style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.15)' }}
+            style={{ backgroundColor: 'rgb(13 38 32)', border: '1px solid rgba(255,255,255,0.15)' }}
           >
             <span style={{ fontSize: 16 }}>📱</span>
             Save Ticket
@@ -192,10 +192,10 @@ function TicketContent() {
             <div
               onClick={e => e.stopPropagation()}
               className="max-w-sm w-full rounded-2xl p-6 text-center"
-              style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.1)' }}
+              style={{ backgroundColor: 'rgb(13 38 32)', border: '1px solid rgba(255,255,255,0.1)' }}
             >
               <div className="text-3xl mb-3">📱</div>
-              <h3 className="text-lg font-bold text-white mb-2">Save Your Ticket</h3>
+              <h3 className="font-display text-lg font-bold text-white mb-2">Save Your Ticket</h3>
               <p className="text-sm text-white/80 leading-relaxed">
                 Take a screenshot of this ticket or bookmark this page so you can show your QR code
                 at the entrance.
@@ -223,7 +223,7 @@ export default function TicketPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-dvh flex items-center justify-center" style={{ backgroundColor: '#1a3d2e' }}>
+        <main className="min-h-dvh flex items-center justify-center" style={{ backgroundColor: 'rgb(10 31 25)' }}>
           <p className="text-sm text-white/70">Loading...</p>
         </main>
       }
