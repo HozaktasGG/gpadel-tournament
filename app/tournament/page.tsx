@@ -1,7 +1,17 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { ChevronDown, LayoutGrid, RefreshCw, Timer, Trophy } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
+import { cn } from '@/lib/utils'
+import { Badge, LivePill } from '@/components/ui/badge'
+import { Avatar, AvatarPair } from '@/components/ui/avatar'
+import { RankMedal } from '@/components/ui/player-row'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { Skeleton } from '@/components/ui/skeleton'
+import { FadeUpItem, FlipNumber, Stagger } from '@/components/motion'
 
 type Match = {
   id: string
@@ -37,23 +47,35 @@ type State = {
   rounds: Round[]
 }
 
-function rankColor(rank: number): string | undefined {
-  if (rank === 1) return '#d4af37'
-  if (rank === 2) return '#c0c0c0'
-  if (rank === 3) return '#cd7f32'
-  return undefined
+// Players in live scoring are plain names (not linked to profiles), so we show initials.
+function shortName(full: string) {
+  const parts = full.trim().split(/\s+/).filter(Boolean)
+  if (parts.length < 2) return full.trim() || '—'
+  const first = parts[0][0].toUpperCase() + parts[0].slice(1).toLowerCase()
+  return `${first} ${parts[parts.length - 1][0].toUpperCase()}.`
 }
 
-function rankBadge(rank: number) {
-  if (rank === 1) return '🥇'
-  if (rank === 2) return '🥈'
-  if (rank === 3) return '🥉'
-  return `${rank}.`
+function ordinal(n: number) {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
+}
+
+function useSecondsSince(ts: number | null) {
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(Date.now()), 5000)
+    return () => window.clearInterval(t)
+  }, [])
+  return ts ? Math.max(0, Math.round((now - ts) / 1000)) : null
 }
 
 export default function TournamentPage() {
   const [state, setState] = useState<State | null>(null)
   const [loading, setLoading] = useState(true)
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null)
+  const [selectedRound, setSelectedRound] = useState<number | null>(null)
+  const [showAll, setShowAll] = useState(false)
   const timerRef = useRef<number | null>(null)
 
   const load = async () => {
@@ -61,6 +83,7 @@ export default function TournamentPage() {
       const res = await fetch('/api/tournament', { cache: 'no-store' })
       const data = await res.json()
       setState(data)
+      setUpdatedAt(Date.now())
     } catch {
       /* silent */
     } finally {
@@ -74,26 +97,10 @@ export default function TournamentPage() {
     const supabase = createClient()
     const channel = supabase
       .channel('tournament-live')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tournament_matches' },
-        () => load()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tournament_rounds' },
-        () => load()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tournament_players' },
-        () => load()
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'tournaments' },
-        () => load()
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_matches' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_rounds' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_players' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tournaments' }, () => load())
       .subscribe()
 
     // Fallback polling — runs even if realtime isn't enabled on the project
@@ -105,244 +112,223 @@ export default function TournamentPage() {
     }
   }, [])
 
+  const since = useSecondsSince(updatedAt)
+
   if (loading && !state) {
     return (
-      <main className="min-h-dvh flex items-center justify-center" style={{ backgroundColor: '#1a3d2e' }}>
-        <p className="text-sm text-white/70">Loading...</p>
+      <main className="mx-auto w-full max-w-2xl flex-1 space-y-4 px-4 py-6" aria-busy="true">
+        <Skeleton className="h-10 w-2/3" />
+        <Skeleton className="h-6 w-1/3" />
+        <Skeleton className="h-12 w-full rounded-full" />
+        {[0, 1, 2].map(i => (
+          <Skeleton key={i} className="h-36 w-full rounded-2xl" />
+        ))}
       </main>
     )
   }
 
   if (!state?.tournament) {
     return (
-      <main className="min-h-dvh flex items-center justify-center p-6" style={{ backgroundColor: '#1a3d2e' }}>
-        <div className="max-w-md w-full text-center">
-          <div className="flex justify-center mb-6">
-            <img src="/smashpadel_logo.png" alt="Smash Padel" width={80} height={80} className="rounded-full" />
-          </div>
-          <p className="text-xl font-bold text-white mb-2">Tournament Not Started</p>
-          <p className="text-sm text-white/70">Check back when the tournament is live.</p>
-          <a href="/" className="inline-block mt-6 text-sm font-semibold" style={{ color: '#ff6b35' }}>
-            Back to Tournament Page
-          </a>
-        </div>
+      <main className="mx-auto flex w-full max-w-2xl flex-1 items-center px-4 py-10">
+        <EmptyState
+          className="w-full"
+          icon={Timer}
+          title="No tournament in progress"
+          description="Live scores appear here as soon as the next tournament starts."
+          action={
+            <Button asChild variant="secondary">
+              <Link href="/">Browse tournaments</Link>
+            </Button>
+          }
+        />
       </main>
     )
   }
 
   const { tournament, players, rounds } = state
-  const currentRound = rounds.find(r => r.round_number === tournament.current_round)
   const isFinished = tournament.status === 'finished'
   const isLive = tournament.status === 'active' || tournament.status === 'live' || tournament.status === 'in_progress'
+  const totalRounds = rounds.length || 4
+  const viewRound = selectedRound ?? (isFinished ? totalRounds : tournament.current_round)
+  const round = rounds.find(r => r.round_number === viewRound)
+  const courts = round?.matches.length ?? 0
+  const isFinalRound = viewRound === totalRounds && totalRounds === 4
+  const modeLabel = tournament.mode === 'court' ? 'Court Americano' : 'Americano'
+  const shownPlayers = showAll ? players : players.slice(0, 3)
 
   return (
-    <main className="min-h-dvh py-8 px-4 sm:py-12" style={{ backgroundColor: '#1a3d2e' }}>
-      <div className="max-w-2xl mx-auto">
-        <div className="flex flex-col items-center mb-8">
-          <img src="/smashpadel_logo.png" alt="Smash Padel" width={72} height={72} className="rounded-full mb-3" />
-          <p className="text-xs tracking-[0.3em] uppercase text-white/60">SmashTorino</p>
-          <h1 className="text-2xl font-bold text-white mt-2 text-center">GPadel Tournament</h1>
-          <p className="text-xs text-white/60 mt-1">Court Americano</p>
-          {isLive && (
-            <span
-              className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest"
-              style={{ backgroundColor: 'rgba(239,68,68,0.18)', color: '#f87171', border: '1px solid rgba(239,68,68,0.4)' }}
-            >
-              <span
-                className="inline-block w-1.5 h-1.5 rounded-full"
-                style={{ backgroundColor: '#ef4444', animation: 'pulse 1.5s infinite' }}
-              />
-              Live
+    <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-8 pt-5 md:pt-10">
+      {/* Header */}
+      <header>
+        <h1 className="font-display text-[40px] font-bold leading-none md:text-hero">Live scores</h1>
+        <p className="mt-1 font-display text-xl text-muted-foreground">{modeLabel}</p>
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
+          {isLive && <LivePill />}
+          {isFinished && <Badge variant="muted" size="md">Finished</Badge>}
+          <p className="font-display text-lg font-semibold">
+            {isFinished ? `${totalRounds} rounds played` : `Round ${tournament.current_round} of ${totalRounds}`}
+          </p>
+          <p className="ml-auto text-sm text-muted-foreground" aria-live="polite">
+            {since === null ? '' : since < 10 ? 'Updated just now' : `Updated ${since < 60 ? `${since}s` : `${Math.round(since / 60)}m`} ago`}
+          </p>
+        </div>
+      </header>
+
+      {/* Round selector */}
+      <nav aria-label="Rounds" className="-mx-4 mt-5 overflow-x-auto px-4 [scrollbar-width:none]">
+        <div className="flex gap-2">
+          {rounds.map(r => {
+            const active = r.round_number === viewRound
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => setSelectedRound(r.round_number)}
+                aria-pressed={active}
+                aria-label={`Round ${r.round_number}${r.round_number === 4 ? ' (final)' : ''}`}
+                className={cn(
+                  'relative inline-flex h-11 min-w-[56px] flex-1 items-center justify-center rounded-full border font-display text-lg font-semibold tabular transition-colors',
+                  active
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border-strong text-foreground hover:bg-white/5 active:bg-white/10',
+                  !active && r.status === 'pending' && 'text-subtle'
+                )}
+              >
+                {r.round_number}
+                {r.status === 'active' && !active && <span className="absolute right-2 top-2 size-1.5 rounded-full bg-live" aria-hidden />}
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* Round info */}
+      {round && (
+        <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <Timer className="size-4" aria-hidden />
+            {round.duration_minutes} min round
+          </span>
+          {courts > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <LayoutGrid className="size-4" aria-hidden />
+              {courts} courts
             </span>
           )}
-        </div>
-
-        <div
-          className="rounded-xl px-5 py-4 mb-6 text-center"
-          style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
-        >
-          {isFinished ? (
-            <>
-              <p className="text-xs tracking-[0.25em] uppercase font-semibold" style={{ color: '#ff6b35' }}>
-                Tournament Finished
-              </p>
-              <p className="text-sm text-white/80 mt-1">Final standings below</p>
-            </>
-          ) : (
-            <>
-              <p className="text-xs tracking-[0.25em] uppercase font-semibold" style={{ color: '#ff6b35' }}>
-                Round {tournament.current_round} / 4
-              </p>
-              <p className="text-sm text-white/80 mt-1">
-                {currentRound?.duration_minutes ?? 20} minutes ·{' '}
-                {tournament.current_round < 4 ? 'Group Stage' : 'Final Round'}
-              </p>
-            </>
+          {isFinalRound && (
+            <span className="inline-flex items-center gap-1.5 text-foreground">
+              <Trophy className="size-4 text-medal-gold" aria-hidden />
+              Final round · court placement
+            </span>
           )}
-        </div>
+        </p>
+      )}
 
-        {!isFinished && currentRound && currentRound.matches.length > 0 && (
-          <section className="mb-8">
-            <h2 className="text-sm font-semibold text-white/90 mb-3">Current Matches</h2>
-            <div className="space-y-3">
-              {currentRound.matches.map(m => (
-                <div
-                  key={m.id}
-                  className="rounded-xl p-4"
-                  style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#ff6b35' }}>
-                      Court {m.court_number}
-                    </p>
-                    {m.team1_score !== null && m.team2_score !== null && (
-                      <span className="text-[10px] font-semibold uppercase tracking-widest text-white/60">
-                        Final
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-white leading-snug">{m.team1[0]}</p>
-                      <p className="text-sm font-semibold text-white leading-snug">{m.team1[1]}</p>
-                    </div>
-                    <div className="px-3 py-2 rounded-lg text-center min-w-[72px]" style={{ backgroundColor: '#1a3d2e' }}>
-                      <p className="text-lg font-bold text-white tabular-nums">
-                        {m.team1_score ?? '—'}
-                        <span className="text-white/40 mx-1">:</span>
-                        {m.team2_score ?? '—'}
-                      </p>
-                    </div>
-                    <div className="flex-1 text-right">
-                      <p className="text-sm font-semibold text-white leading-snug">{m.team2[0]}</p>
-                      <p className="text-sm font-semibold text-white leading-snug">{m.team2[1]}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="mb-8">
-          <h2 className="text-sm font-semibold text-white/90 mb-3">
-            {isFinished ? 'Final Standings' : 'Live Standings'}
-          </h2>
-          <div
-            className="rounded-xl overflow-hidden"
-            style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
-          >
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-white/60 text-[11px] uppercase tracking-wider">
-                  <th className="py-3 px-3 text-left font-semibold">#</th>
-                  <th className="py-3 px-2 text-left font-semibold">Player</th>
-                  <th className="py-3 px-2 text-right font-semibold">+/-</th>
-                  <th className="py-3 px-3 text-right font-semibold">MP</th>
-                </tr>
-              </thead>
-              <tbody>
-                {players.map(p => {
-                  const color = rankColor(p.rank)
-                  const diff = p.total_games_won
-                  const diffColor = diff > 0 ? '#4ade80' : diff < 0 ? '#f87171' : 'rgba(255,255,255,0.7)'
-                  const diffLabel = diff > 0 ? `+${diff}` : String(diff)
-                  return (
-                    <tr key={p.id} className="border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                      <td className="py-3 px-3">
-                        <span
-                          className="inline-flex items-center justify-center min-w-[28px] h-7 rounded-full text-xs font-bold"
-                          style={{
-                            backgroundColor: color || 'rgba(255,255,255,0.06)',
-                            color: color ? '#1a3d2e' : '#fff',
-                          }}
-                        >
-                          {rankBadge(p.rank)}
+      {/* Courts */}
+      <section aria-label="Courts" className="mt-4">
+        {!round || round.matches.length === 0 ? (
+          <EmptyState icon={LayoutGrid} title="Courts not drawn yet" description="Matches appear here when this round starts." />
+        ) : (
+          <Stagger className="space-y-3" key={viewRound}>
+            {round.matches.map(m => {
+              const done = m.status === 'completed' || (m.team1_score !== null && m.team2_score !== null && round.status === 'completed')
+              const playing = round.status === 'active' && !done
+              const t1Won = done && (m.team1_score ?? 0) > (m.team2_score ?? 0)
+              const t2Won = done && (m.team2_score ?? 0) > (m.team1_score ?? 0)
+              const base = (m.court_number - 1) * 2 + 1
+              return (
+                <FadeUpItem key={m.id}>
+                  <article className={cn('overflow-hidden rounded-2xl border bg-card shadow-card', playing ? 'border-primary/30' : 'border-border')}>
+                    <header className="flex items-center justify-between px-4 pt-3">
+                      <h3 className="font-display text-xl font-semibold">
+                        Court {m.court_number}
+                        {isFinalRound && (
+                          <span className="ml-2 text-sm font-medium text-muted-foreground">
+                            for {ordinal(base)} / {ordinal(base + 1)}
+                          </span>
+                        )}
+                      </h3>
+                      {playing ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-primary-text">
+                          <span className="size-2 rounded-full bg-live motion-safe:animate-pulse" aria-hidden />
+                          Live
                         </span>
-                      </td>
-                      <td className="py-3 px-2 font-semibold text-white">{p.name}</td>
-                      <td
-                        className="py-3 px-2 text-right tabular-nums font-bold"
-                        style={{ color: diffColor }}
-                      >
-                        {diffLabel}
-                      </td>
-                      <td className="py-3 px-3 text-right text-white/60 tabular-nums">{p.games_played}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                      ) : done ? (
+                        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-subtle">Final</span>
+                      ) : null}
+                    </header>
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 pb-4 pt-2">
+                      <Pair names={m.team1} won={t1Won} lost={t2Won} />
+                      <p className="flex items-center gap-2 font-display text-score font-bold" aria-label={`Score ${m.team1_score ?? 0} to ${m.team2_score ?? 0}`}>
+                        <FlipNumber value={m.team1_score ?? '–'} className={cn(t2Won && 'text-muted-foreground')} />
+                        <span className="text-3xl text-subtle">:</span>
+                        <FlipNumber value={m.team2_score ?? '–'} className={cn(t1Won && 'text-muted-foreground')} />
+                      </p>
+                      <Pair names={m.team2} won={t2Won} lost={t1Won} />
+                    </div>
+                  </article>
+                </FadeUpItem>
+              )
+            })}
+          </Stagger>
+        )}
+      </section>
 
-        <section>
-          <h2 className="text-sm font-semibold text-white/90 mb-3">All Rounds</h2>
-          <div className="space-y-4">
-            {rounds.map(r => (
-              <div
-                key={r.id}
-                className="rounded-xl overflow-hidden"
-                style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
-              >
-                <div
-                  className="flex items-center justify-between px-4 py-3"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
-                >
-                  <p className="text-sm font-semibold text-white">
-                    Round {r.round_number}{' '}
-                    {r.round_number === 4 && <span className="text-xs text-white/50">(Final)</span>}
-                  </p>
-                  <span
-                    className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"
-                    style={{
-                      backgroundColor:
-                        r.status === 'active'
-                          ? '#ff6b35'
-                          : r.status === 'completed'
-                          ? 'rgba(255,255,255,0.12)'
-                          : 'rgba(255,255,255,0.04)',
-                      color: r.status === 'active' ? '#fff' : 'rgba(255,255,255,0.6)',
-                    }}
-                  >
-                    {r.status}
-                  </span>
-                </div>
-                {r.matches.length === 0 ? (
-                  <p className="px-4 py-4 text-xs text-white/50">Matches will appear when this round starts.</p>
-                ) : (
-                  <div>
-                    {r.matches.map(m => (
-                      <div
-                        key={m.id}
-                        className="px-4 py-3 flex items-center gap-3 border-t"
-                        style={{ borderColor: 'rgba(255,255,255,0.06)' }}
-                      >
-                        <p className="text-[10px] font-bold uppercase tracking-widest w-12" style={{ color: '#ff6b35' }}>
-                          C{m.court_number}
-                        </p>
-                        <div className="flex-1 text-xs text-white/85 leading-tight">
-                          {m.team1[0]} + {m.team1[1]}
-                        </div>
-                        <div className="text-xs font-bold text-white tabular-nums min-w-[46px] text-center">
-                          {m.team1_score ?? '—'}:{m.team2_score ?? '—'}
-                        </div>
-                        <div className="flex-1 text-xs text-white/85 leading-tight text-right">
-                          {m.team2[0]} + {m.team2[1]}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <div className="mt-10 text-center">
-          <a href="/" className="text-xs text-white/50 underline">Back to Tournament Page</a>
+      {/* Standings */}
+      <section aria-labelledby="standings-h" className="mt-8">
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 id="standings-h" className="font-display text-2xl font-semibold">
+            {isFinished ? 'Final standings' : 'Individual standings'}
+          </h2>
+          <p className="text-xs uppercase tracking-wider text-subtle">+/- · MP</p>
         </div>
-      </div>
+        <ol className="overflow-hidden rounded-2xl border border-border bg-card">
+          {shownPlayers.map(p => {
+            const diff = p.total_games_won
+            return (
+              <li key={p.id} className="flex min-h-[60px] items-center gap-3 border-b border-border px-3 last:border-0">
+                <RankMedal rank={p.rank} />
+                <Avatar name={p.name} size="sm" />
+                <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
+                <span
+                  className={cn(
+                    'w-12 text-right font-display text-xl font-bold tabular',
+                    diff > 0 ? 'text-success' : diff < 0 ? 'text-destructive' : 'text-muted-foreground'
+                  )}
+                >
+                  <FlipNumber value={diff > 0 ? `+${diff}` : String(diff)} />
+                </span>
+                <span className="w-6 text-right text-sm text-muted-foreground tabular">{p.games_played}</span>
+              </li>
+            )
+          })}
+        </ol>
+        {players.length > 3 && (
+          <Button variant="ghost" block className="mt-2 font-sans text-[15px] font-medium text-muted-foreground" onClick={() => setShowAll(v => !v)} aria-expanded={showAll}>
+            {showAll ? 'Show top 3' : `View full standings (${players.length})`}
+            <ChevronDown className={cn('transition-transform', showAll && 'rotate-180')} aria-hidden />
+          </Button>
+        )}
+      </section>
+
+      {isLive && (
+        <p className="mt-6 flex items-center justify-center gap-2 text-sm text-muted-foreground">
+          <RefreshCw className="size-4" aria-hidden />
+          Scores update automatically
+        </p>
+      )}
     </main>
+  )
+}
+
+function Pair({ names, won, lost }: { names: [string, string]; won: boolean; lost: boolean }) {
+  return (
+    <div className={cn('flex min-w-0 flex-col items-center gap-1.5 text-center', lost && 'opacity-60')}>
+      <AvatarPair a={{ name: names[0] }} b={{ name: names[1] }} size="md" />
+      <p className={cn('w-full text-sm leading-tight', won ? 'font-semibold text-foreground' : 'text-foreground/90')}>
+        <span className="block truncate">{shortName(names[0])}</span>
+        <span className="block truncate">{shortName(names[1])}</span>
+      </p>
+    </div>
   )
 }
