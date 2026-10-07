@@ -157,6 +157,8 @@ export type EventUpdateInput = {
   status: string
   image_url: string | null
   pdf_url: string | null
+  featured?: boolean | null
+  subtitle?: string | null
 }
 
 export async function updateEvent(eventId: string, input: EventUpdateInput) {
@@ -185,6 +187,9 @@ export async function updateEvent(eventId: string, input: EventUpdateInput) {
         status: input.status,
         image_url: str(input.image_url),
         pdf_url: str(input.pdf_url),
+        // Only touched when the editor sends them (events.featured / events.subtitle).
+        ...(input.featured !== undefined ? { featured: !!input.featured } : {}),
+        ...(input.subtitle !== undefined ? { subtitle: str(input.subtitle) } : {}),
       })
       .eq('id', eventId)
     dbFail('Failed to update event', error)

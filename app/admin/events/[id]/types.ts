@@ -12,6 +12,8 @@ export type AdminEvent = {
   image_url: string | null
   pdf_url: string | null
   registration_open: boolean
+  featured: boolean | null
+  subtitle: string | null
 }
 
 export type AdminRegistration = {
@@ -37,6 +39,7 @@ export type AdminProfile = {
   email: string | null
   player_code: string | null
   skill_level: string | null
+  skill_score: number | null
   avatar_url: string | null
 }
 

@@ -20,6 +20,7 @@ export function BottomSheet({
   children,
   footer,
   className,
+  bodyClassName,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -29,6 +30,8 @@ export function BottomSheet({
   /** Sticky action area (e.g. primary button). */
   footer?: React.ReactNode
   className?: string
+  /** Overrides the body padding (e.g. children that bring their own). */
+  bodyClassName?: string
 }) {
   const reduce = useReducedMotion()
   const drag = useDragControls()
@@ -104,7 +107,7 @@ export function BottomSheet({
                     <X className="size-5" />
                   </DialogPrimitive.Close>
                 </div>
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">{children}</div>
+                <div className={cn('min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4', bodyClassName)}>{children}</div>
                 {footer ? (
                   <div className="shrink-0 border-t border-border px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] md:pb-5">{footer}</div>
                 ) : (

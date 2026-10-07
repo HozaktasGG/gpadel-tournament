@@ -1,14 +1,40 @@
 'use client'
 
 import { useCallback, useMemo, useState, type ReactNode } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronRight,
+  Download,
+  ExternalLink,
+  Network,
+  Pencil,
+  Plus,
+  Trash2,
+  TriangleAlert,
+  Users,
+  Wallet,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { formatEventDate, formatPrice } from '@/lib/event-status'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Badge, SkillBadge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { SearchInput } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Checkbox } from '@/components/ui/checkbox'
+import { EmptyState } from '@/components/ui/empty-state'
+import { searchKey } from '@/lib/search'
 import type { ActionResult } from './actions'
 import { addRegistrations, removeRegistration, setRegistrationOpen, setRegistrationStatus, updateEvent, updateProfile } from './actions'
 import ProfilePicker from './profile-picker'
 import TeamsSection from './teams-section'
 import type { AdminEvent, AdminProfile, AdminRegistration, AdminTeam } from './types'
 import { fullName, isTeamFormat } from './types'
-import { Avatar, C, GhostButton, LevelBadge, PrimaryButton, Section, Sheet, inputCls, labelCls, useConfirm, useToasts } from './ui'
+import { Avatar, C, PrimaryButton, Sheet, inputCls, labelCls, useConfirm, useToasts } from './ui'
 
 export type AdminCtx = {
   eventId: string
@@ -25,6 +51,15 @@ export type AdminCtx = {
 
 const FORMATS = ['Americano', 'Team Americano', 'Team', 'Round Robin', 'Elimination']
 const STATUSES = ['upcoming', 'active', 'completed']
+
+function Warning({ children }: { children: ReactNode }) {
+  return (
+    <p className="flex items-start gap-2 rounded-xl border border-skill-intermediate/30 bg-skill-intermediate/10 px-3 py-2 text-sm text-skill-intermediate">
+      <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <span>{children}</span>
+    </p>
+  )
+}
 
 export default function EventAdmin({
   event,
@@ -67,9 +102,9 @@ export default function EventAdmin({
   )
 
   const fixtureNote = hasFixtures ? (
-    <p className="rounded-lg px-3 py-2 text-xs font-semibold" style={{ backgroundColor: 'rgba(234,179,8,0.15)', color: '#facc15' }}>
-      ⚠ This tournament already has generated rounds/matches. Changing participants or teams may make existing fixtures inconsistent. Fixtures and scores are not changed automatically.
-    </p>
+    <Warning>
+      This tournament already has generated rounds/matches. Changing participants or teams may make existing fixtures inconsistent. Fixtures and scores are not changed automatically.
+    </Warning>
   ) : null
 
   const confirmFixtures = useCallback(async () => {
@@ -83,9 +118,9 @@ export default function EventAdmin({
   const capacity = event.max_players ?? 0
   const capacityNote = (adding: number) =>
     capacity > 0 && filled + adding > capacity ? (
-      <p className="rounded-lg px-3 py-2 text-xs font-semibold" style={{ backgroundColor: 'rgba(234,179,8,0.15)', color: '#facc15' }}>
-        ⚠ This exceeds max players: {filled + adding} / {capacity}. Admin adds are still allowed.
-      </p>
+      <Warning>
+        This exceeds max players: {filled + adding} / {capacity}. Admin adds are still allowed.
+      </Warning>
     ) : null
 
   // ───── Profile quick edit ─────
@@ -107,6 +142,8 @@ export default function EventAdmin({
     if (ok) setProfileEdit(null)
   }
 
+  const [editingDetails, setEditingDetails] = useState(false)
+
   const ctx: AdminCtx = {
     eventId: event.id,
     profiles,
@@ -120,38 +157,95 @@ export default function EventAdmin({
     editProfile,
   }
 
+  const open = event.registration_open
+  const startLabel = [formatEventDate(event.date, 'short').replace(/^\w+, /, ''), event.time].filter(Boolean).join(' · ')
+
   return (
-    <main className="min-h-dvh px-4 py-5 sm:p-10" style={{ backgroundColor: C.bg }}>
+    <main className="mx-auto w-full max-w-[1100px] flex-1 px-4 pb-10 pt-4 md:px-8 md:pt-6">
       {toastView}
       {dialog}
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-center justify-between gap-3 mb-4">
-          <a href="/admin" className="min-h-11 inline-flex items-center text-sm font-semibold text-white/70">
-            ← Admin
-          </a>
-          <a href={`/tournaments/${event.id}`} className="min-h-11 inline-flex items-center text-sm font-semibold" style={{ color: C.orange }}>
-            Public page ↗
-          </a>
+
+      {/* Breadcrumb (desktop) / back (phones) */}
+      <nav aria-label="Breadcrumb" className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+        <Link href="/admin#events" className="inline-flex min-h-11 items-center gap-1.5 hover:text-foreground">
+          <ArrowLeft className="size-4 md:hidden" aria-hidden />
+          Events
+        </Link>
+        <ChevronRight className="hidden size-4 md:block" aria-hidden />
+        <span className="hidden truncate text-foreground/80 md:block">{event.name}</span>
+      </nav>
+
+      {/* Header */}
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="font-display text-[36px] font-bold leading-none md:text-hero">Manage event</h1>
+          <p className="mt-1 truncate text-[17px] text-foreground/85 md:text-lg">
+            {event.name}
+            {event.format && <span className="text-muted-foreground"> · {event.format}</span>}
+          </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={open ? 'success' : 'muted'} size="md" className={cn('h-10 px-3 text-sm md:px-4', open && 'border border-success/30')}>
+            <span className={cn('size-2 rounded-full', open ? 'bg-success' : 'bg-subtle')} aria-hidden />
+            {open ? 'Registration open' : 'Registration closed'}
+          </Badge>
+          <Button variant="secondary" size="sm" onClick={() => setEditingDetails(true)} aria-label="Edit details" className="max-md:size-10 max-md:px-0">
+            <Pencil />
+            <span className="max-md:hidden">Edit details</span>
+          </Button>
+          {event.pdf_url && (
+            <Button asChild variant="secondary" size="sm">
+              <a href={event.pdf_url} target="_blank" rel="noopener noreferrer">
+                <Download />
+                <span className="max-md:hidden">PDF</span>
+              </a>
+            </Button>
+          )}
+          <Button asChild variant="ghost" size="sm" className="max-md:size-10 max-md:px-0">
+            <Link href={`/tournaments/${event.id}`} aria-label="Public page">
+              <ExternalLink />
+              <span className="max-md:hidden">Public page</span>
+            </Link>
+          </Button>
+        </div>
+      </header>
 
-        <h1 className="text-2xl font-bold text-white mb-1 break-words">{event.name}</h1>
-        <p className="text-sm text-white/60 mb-4">
-          {event.date}
-          {event.time ? ` · ${event.time}` : ''}
-          {event.format ? ` · ${event.format}` : ''} · {filled}
-          {capacity > 0 ? ` / ${capacity}` : ''} players
-        </p>
-
-        {fixtureNote && <div className="mb-4">{fixtureNote}</div>}
-
-        <RegistrationToggle event={event} run={run} ask={ask} />
-
-        <EventDetails event={event} run={run} />
-
-        <ParticipantsSection ctx={ctx} event={event} registrations={registrations} teams={teams} />
-
-        {teamFormat && <TeamsSection ctx={ctx} registrations={registrations} teams={teams} />}
+      {/* Stat cards */}
+      <div className="mt-5 grid grid-cols-3 gap-2 md:gap-4">
+        <StatCard icon={Users} value={capacity > 0 ? `${filled} / ${capacity}` : String(filled)} label="Players" />
+        <StatCard icon={Wallet} value={formatPrice(event.entry_fee) ?? '—'} label="Entry fee" />
+        <StatCard icon={CalendarDays} value={startLabel || '—'} label="Start" />
       </div>
+
+      {/* Registration + capacity */}
+      <Card className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3 p-4">
+        <RegistrationToggle event={event} run={run} ask={ask} />
+        <span className="hidden h-8 w-px bg-border md:block" aria-hidden />
+        <CapacityControl event={event} run={run} />
+      </Card>
+
+      {fixtureNote && <div className="mt-3">{fixtureNote}</div>}
+
+      <Tabs defaultValue="participants" className="mt-5">
+        <TabsList>
+          <TabsTrigger value="participants">Participants</TabsTrigger>
+          {teamFormat && <TabsTrigger value="teams">Teams</TabsTrigger>}
+          <TabsTrigger value="fixtures">Fixtures</TabsTrigger>
+        </TabsList>
+        <TabsContent value="participants">
+          <ParticipantsSection ctx={ctx} event={event} registrations={registrations} teams={teams} />
+        </TabsContent>
+        {teamFormat && (
+          <TabsContent value="teams">
+            <TeamsSection ctx={ctx} registrations={registrations} teams={teams} />
+          </TabsContent>
+        )}
+        <TabsContent value="fixtures">
+          <FixturesCard event={event} hasFixtures={hasFixtures} />
+        </TabsContent>
+      </Tabs>
+
+      <EventDetails event={event} run={run} open={editingDetails} onClose={() => setEditingDetails(false)} />
 
       <Sheet
         open={!!profileEdit}
@@ -164,8 +258,8 @@ export default function EventAdmin({
         }
       >
         {profileEdit && (
-          <div className="px-4 pb-4 space-y-3">
-            <p className="text-xs text-white/50 break-all">{profileMap.get(profileEdit.id)?.email}</p>
+          <div className="space-y-3 px-5 pb-4">
+            <p className="break-all text-sm text-muted-foreground">{profileMap.get(profileEdit.id)?.email}</p>
             <label className="block">
               <span className={labelCls}>First name</span>
               <input className={inputCls} style={C.input} value={profileEdit.first_name} onChange={e => setProfileEdit({ ...profileEdit, first_name: e.target.value })} />
@@ -191,6 +285,20 @@ export default function EventAdmin({
   )
 }
 
+function StatCard({ icon: Icon, value, label }: { icon: typeof Users; value: string; label: string }) {
+  return (
+    <Card className="flex min-w-0 flex-col gap-2 p-3 md:flex-row md:items-center md:gap-4 md:p-5">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border-strong text-muted-foreground md:size-12">
+        <Icon className="size-4 md:size-6" aria-hidden />
+      </span>
+      <div className="min-w-0">
+        <p className="break-words font-display text-lg font-bold leading-tight tabular md:truncate md:text-[32px] md:leading-none">{value}</p>
+        <p className="mt-1 text-xs text-muted-foreground md:text-base">{label}</p>
+      </div>
+    </Card>
+  )
+}
+
 // ───────────────────────── Registration open/close ─────────────────────────
 
 function RegistrationToggle({ event, run, ask }: { event: AdminEvent; run: AdminCtx['run']; ask: AdminCtx['ask'] }) {
@@ -213,180 +321,267 @@ function RegistrationToggle({ event, run, ask }: { event: AdminEvent; run: Admin
   }
 
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      disabled={saving}
-      role="switch"
-      aria-checked={open}
-      className="w-full flex items-center justify-between gap-3 rounded-2xl px-4 py-3 mb-4 min-h-16 text-left disabled:opacity-60"
-      style={{
-        backgroundColor: open ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)',
-        border: `1px solid ${open ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`,
-      }}
-    >
-      <span>
-        <span className="block text-sm font-bold" style={{ color: open ? '#22c55e' : '#f87171' }}>
-          {open ? 'Registrations open' : 'Registrations closed'}
-        </span>
-        <span className="block text-xs text-white/50">{saving ? 'Saving…' : 'Tap to ' + (open ? 'close' : 'open')}</span>
-      </span>
-      <span className="relative w-14 h-8 rounded-full shrink-0 transition" style={{ backgroundColor: open ? '#22c55e' : 'rgba(255,255,255,0.2)' }}>
-        <span className="absolute top-1 w-6 h-6 rounded-full bg-white transition-all" style={{ left: open ? 28 : 4 }} />
-      </span>
-    </button>
+    <label className="flex min-h-11 cursor-pointer items-center gap-4">
+      <span className="text-[15px] font-medium">{saving ? 'Saving…' : 'Registration open'}</span>
+      <Switch checked={open} onCheckedChange={toggle} disabled={saving} aria-label="Registration open" />
+    </label>
   )
 }
 
-// ───────────────────────── Event details ─────────────────────────
+// ───────────────────────── Capacity (max players) ─────────────────────────
 
-function EventDetails({ event, run }: { event: AdminEvent; run: AdminCtx['run'] }) {
-  const [form, setForm] = useState<AdminEvent | null>(null)
+function CapacityControl({ event, run }: { event: AdminEvent; run: AdminCtx['run'] }) {
+  const [value, setValue] = useState<string>(event.max_players != null ? String(event.max_players) : '')
   const [saving, setSaving] = useState(false)
+  const current = event.max_players != null ? String(event.max_players) : ''
+  const dirty = value !== current
 
+  // Same updateEvent action as the details editor, changing only max_players.
   const save = async () => {
-    if (!form) return
     setSaving(true)
     const ok = await run(
       updateEvent(event.id, {
-        name: form.name,
-        date: form.date,
-        time: form.time,
-        location: form.location,
-        max_players: form.max_players,
-        entry_fee: form.entry_fee,
-        description: form.description,
-        format: form.format,
-        status: form.status,
-        image_url: form.image_url,
-        pdf_url: form.pdf_url,
+        name: event.name,
+        date: event.date,
+        time: event.time,
+        location: event.location,
+        max_players: value === '' ? null : Number(value),
+        entry_fee: event.entry_fee,
+        description: event.description,
+        format: event.format,
+        status: event.status,
+        image_url: event.image_url,
+        pdf_url: event.pdf_url,
+      }),
+      'Capacity saved'
+    )
+    setSaving(false)
+    if (!ok) setValue(current)
+  }
+
+  const step = (d: number) => setValue(v => String(Math.max(0, (Number(v) || 0) + d)))
+
+  return (
+    <div className="flex items-center gap-3">
+      <label htmlFor="capacity" className="text-[15px] font-medium">
+        Capacity
+      </label>
+      <div className="flex items-center rounded-xl border border-input bg-pitch-800">
+        <button type="button" onClick={() => step(-1)} className="flex size-11 items-center justify-center text-lg text-muted-foreground hover:text-foreground" aria-label="Decrease capacity">
+          −
+        </button>
+        <input
+          id="capacity"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          value={value}
+          onChange={e => setValue(e.target.value)}
+          className="h-11 w-14 bg-transparent text-center text-base tabular outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+        />
+        <button type="button" onClick={() => step(1)} className="flex size-11 items-center justify-center text-lg text-muted-foreground hover:text-foreground" aria-label="Increase capacity">
+          +
+        </button>
+      </div>
+      {dirty && (
+        <Button size="sm" onClick={save} disabled={saving}>
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+// ───────────────────────── Event details editor ─────────────────────────
+
+function EventDetails({ event, run, open, onClose }: { event: AdminEvent; run: AdminCtx['run']; open: boolean; onClose: () => void }) {
+  const [form, setForm] = useState<AdminEvent | null>(null)
+  const [saving, setSaving] = useState(false)
+  const f = open ? form ?? event : null
+
+  const save = async () => {
+    if (!f) return
+    setSaving(true)
+    const ok = await run(
+      updateEvent(event.id, {
+        name: f.name,
+        date: f.date,
+        time: f.time,
+        location: f.location,
+        max_players: f.max_players,
+        entry_fee: f.entry_fee,
+        description: f.description,
+        format: f.format,
+        status: f.status,
+        image_url: f.image_url,
+        pdf_url: f.pdf_url,
+        featured: !!f.featured,
+        subtitle: f.subtitle,
       }),
       'Event saved'
     )
     setSaving(false)
-    if (ok) setForm(null)
+    if (ok) {
+      setForm(null)
+      onClose()
+    }
   }
 
-  const set = <K extends keyof AdminEvent>(k: K, v: AdminEvent[K]) => setForm(f => (f ? { ...f, [k]: v } : f))
-  const formats = form?.format && !FORMATS.includes(form.format) ? [form.format, ...FORMATS] : FORMATS
+  const set = <K extends keyof AdminEvent>(k: K, v: AdminEvent[K]) => setForm(prev => ({ ...(prev ?? event), [k]: v }))
+  const formats = f?.format && !FORMATS.includes(f.format) ? [f.format, ...FORMATS] : FORMATS
+  const close = () => {
+    setForm(null)
+    onClose()
+  }
 
   return (
-    <Section title="Event details" action={<GhostButton onClick={() => setForm({ ...event })}>Edit</GhostButton>}>
-      <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        {[
-          ['Location', event.location],
-          ['Status', event.status],
-          ['Max players', event.max_players],
-          ['Entry fee', event.entry_fee != null ? `€${event.entry_fee}` : null],
-        ].map(([k, v]) => (
-          <div key={k as string} className="min-w-0">
-            <dt className="text-[11px] uppercase tracking-wide text-white/40 font-semibold">{k}</dt>
-            <dd className="text-white truncate">{v ?? '—'}</dd>
+    <Sheet
+      open={open}
+      onClose={close}
+      title="Edit event"
+      tall
+      footer={
+        <PrimaryButton className="w-full" onClick={save} disabled={saving}>
+          {saving ? 'Saving…' : 'Save changes'}
+        </PrimaryButton>
+      }
+    >
+      {f && (
+        <div className="space-y-3 px-5 pb-4">
+          <label className="block">
+            <span className={labelCls}>Name</span>
+            <input className={inputCls} style={C.input} value={f.name} onChange={e => set('name', e.target.value)} />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Subtitle (line under the title, optional)</span>
+            <input className={inputCls} style={C.input} value={f.subtitle ?? ''} placeholder="e.g. Court Americano" onChange={e => set('subtitle', e.target.value)} />
+          </label>
+          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-[15px]">
+            <Checkbox checked={!!f.featured} onCheckedChange={v => set('featured', v === true)} />
+            Featured (shows the orange “FEATURED” tag)
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className={labelCls}>Date</span>
+              <input type="date" className={inputCls} style={C.input} value={f.date ?? ''} onChange={e => set('date', e.target.value)} />
+            </label>
+            <label className="block">
+              <span className={labelCls}>Time</span>
+              <input className={inputCls} style={C.input} value={f.time ?? ''} placeholder="17:00" onChange={e => set('time', e.target.value)} />
+            </label>
           </div>
-        ))}
-      </dl>
+          <label className="block">
+            <span className={labelCls}>Location</span>
+            <input className={inputCls} style={C.input} value={f.location ?? ''} onChange={e => set('location', e.target.value)} />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className={labelCls}>Max players</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                className={inputCls}
+                style={C.input}
+                value={f.max_players ?? ''}
+                onChange={e => set('max_players', e.target.value === '' ? null : Number(e.target.value))}
+              />
+            </label>
+            <label className="block">
+              <span className={labelCls}>Entry fee (€)</span>
+              <input
+                type="number"
+                inputMode="decimal"
+                min={0}
+                step="0.01"
+                className={inputCls}
+                style={C.input}
+                value={f.entry_fee ?? ''}
+                onChange={e => set('entry_fee', e.target.value === '' ? null : Number(e.target.value))}
+              />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className={labelCls}>Format</span>
+              <select className={inputCls} style={C.input} value={f.format ?? ''} onChange={e => set('format', e.target.value || null)}>
+                <option value="">—</option>
+                {formats.map(x => (
+                  <option key={x} value={x}>
+                    {x}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className={labelCls}>Status</span>
+              <select className={inputCls} style={C.input} value={f.status} onChange={e => set('status', e.target.value)}>
+                {STATUSES.map(s => (
+                  <option key={s} value={s}>
+                    {s[0].toUpperCase() + s.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="block">
+            <span className={labelCls}>Description</span>
+            <textarea rows={4} className={`${inputCls} resize-y`} style={C.input} value={f.description ?? ''} onChange={e => set('description', e.target.value)} />
+          </label>
+          <label className="block">
+            <span className={labelCls}>Logo / image URL</span>
+            <input type="url" className={inputCls} style={C.input} value={f.image_url ?? ''} onChange={e => set('image_url', e.target.value)} />
+          </label>
+          {f.image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={f.image_url} alt="" className="size-20 rounded-full border-2 border-white/80 bg-white object-contain" />
+          )}
+          <label className="block">
+            <span className={labelCls}>Info PDF URL</span>
+            <input type="url" className={inputCls} style={C.input} value={f.pdf_url ?? ''} onChange={e => set('pdf_url', e.target.value)} />
+          </label>
+        </div>
+      )}
+    </Sheet>
+  )
+}
 
-      <Sheet
-        open={!!form}
-        onClose={() => setForm(null)}
-        title="Edit event"
-        tall
-        footer={
-          <PrimaryButton className="w-full" onClick={save} disabled={saving}>
-            {saving ? 'Saving…' : 'Save changes'}
-          </PrimaryButton>
-        }
-      >
-        {form && (
-          <div className="px-4 pb-4 space-y-3">
-            <label className="block">
-              <span className={labelCls}>Name</span>
-              <input className={inputCls} style={C.input} value={form.name} onChange={e => set('name', e.target.value)} />
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className={labelCls}>Date</span>
-                <input type="date" className={inputCls} style={C.input} value={form.date ?? ''} onChange={e => set('date', e.target.value)} />
-              </label>
-              <label className="block">
-                <span className={labelCls}>Time</span>
-                <input className={inputCls} style={C.input} value={form.time ?? ''} placeholder="17:00" onChange={e => set('time', e.target.value)} />
-              </label>
-            </div>
-            <label className="block">
-              <span className={labelCls}>Location</span>
-              <input className={inputCls} style={C.input} value={form.location ?? ''} onChange={e => set('location', e.target.value)} />
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className={labelCls}>Max players</span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  min={0}
-                  className={inputCls}
-                  style={C.input}
-                  value={form.max_players ?? ''}
-                  onChange={e => set('max_players', e.target.value === '' ? null : Number(e.target.value))}
-                />
-              </label>
-              <label className="block">
-                <span className={labelCls}>Entry fee (€)</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step="0.01"
-                  className={inputCls}
-                  style={C.input}
-                  value={form.entry_fee ?? ''}
-                  onChange={e => set('entry_fee', e.target.value === '' ? null : Number(e.target.value))}
-                />
-              </label>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className={labelCls}>Format</span>
-                <select className={inputCls} style={C.input} value={form.format ?? ''} onChange={e => set('format', e.target.value || null)}>
-                  <option value="">—</option>
-                  {formats.map(f => (
-                    <option key={f} value={f}>
-                      {f}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="block">
-                <span className={labelCls}>Status</span>
-                <select className={inputCls} style={C.input} value={form.status} onChange={e => set('status', e.target.value)}>
-                  {STATUSES.map(s => (
-                    <option key={s} value={s}>
-                      {s[0].toUpperCase() + s.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <label className="block">
-              <span className={labelCls}>Description</span>
-              <textarea rows={4} className={`${inputCls} resize-y`} style={C.input} value={form.description ?? ''} onChange={e => set('description', e.target.value)} />
-            </label>
-            <label className="block">
-              <span className={labelCls}>Image URL</span>
-              <input type="url" className={inputCls} style={C.input} value={form.image_url ?? ''} onChange={e => set('image_url', e.target.value)} />
-            </label>
-            {form.image_url && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={form.image_url} alt="" className="w-full max-h-40 object-cover rounded-xl" />
-            )}
-            <label className="block">
-              <span className={labelCls}>Info PDF URL</span>
-              <input type="url" className={inputCls} style={C.input} value={form.pdf_url ?? ''} onChange={e => set('pdf_url', e.target.value)} />
-            </label>
-          </div>
+// ───────────────────────── Fixtures ─────────────────────────
+
+function FixturesCard({ event, hasFixtures }: { event: AdminEvent; hasFixtures: boolean }) {
+  return (
+    <Card className="p-4 md:p-5">
+      <div className="flex items-center gap-3">
+        <span className="flex size-11 items-center justify-center rounded-xl border border-border-strong text-muted-foreground">
+          <Network className="size-5" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <h2 className="font-display text-2xl font-semibold leading-tight">Fixtures</h2>
+          <p className="text-sm text-muted-foreground">
+            {event.format === 'Team' ? 'Group stage + knockout' : event.format === 'Team Americano' ? 'Round robin + placement finals' : 'Americano rounds + court finals'}
+          </p>
+        </div>
+      </div>
+      <p className="mt-4 text-[15px] text-muted-foreground">
+        {hasFixtures ? 'Fixtures have been generated. Enter scores and manage rounds in the fixtures manager.' : 'Generate and score the fixtures for this event in the fixtures manager.'}
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Button asChild>
+          <Link href={`/admin/tournament?event=${event.id}`}>
+            <Network />
+            {hasFixtures ? 'Open fixtures' : 'Generate fixtures'}
+          </Link>
+        </Button>
+        {event.pdf_url && (
+          <Button asChild variant="secondary">
+            <a href={event.pdf_url} target="_blank" rel="noopener noreferrer">
+              <Download />
+              Download PDF
+            </a>
+          </Button>
         )}
-      </Sheet>
-    </Section>
+      </div>
+    </Card>
   )
 }
 
@@ -406,6 +601,7 @@ function ParticipantsSection({
   const [pickerOpen, setPickerOpen] = useState(false)
   const [sendEmail, setSendEmail] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
+  const [q, setQ] = useState('')
 
   const teamOf = useMemo(() => {
     const m = new Map<string, string>()
@@ -417,6 +613,15 @@ function ParticipantsSection({
   }, [teams])
 
   const disabled = useMemo(() => new Map(registrations.map(r => [r.user_id, 'Registered'])), [registrations])
+
+  const visible = useMemo(() => {
+    const k = searchKey(q.trim())
+    if (!k) return registrations
+    return registrations.filter(r => {
+      const p = ctx.profileMap.get(r.user_id)
+      return searchKey(`${fullName(p)} ${p?.player_code ?? ''} ${p?.email ?? ''}`).includes(k)
+    })
+  }, [q, registrations, ctx.profileMap])
 
   const openPicker = async () => {
     if (!(await ctx.confirmFixtures())) return
@@ -458,82 +663,155 @@ function ParticipantsSection({
     setBusy(null)
   }
 
+  const statusSelect = (r: AdminRegistration, className?: string) => {
+    const statusOptions = ['approved', 'pending'].includes(r.status) ? ['approved', 'pending'] : [r.status, 'approved', 'pending']
+    return (
+      <select
+        value={r.status}
+        disabled={busy === r.id}
+        onChange={e => changeStatus(r, e.target.value)}
+        className={cn('min-h-11 rounded-xl border border-input bg-pitch-800 px-3 text-base outline-none focus-visible:border-primary-text', className)}
+        aria-label={`Registration status for ${fullName(ctx.profileMap.get(r.user_id))}`}
+      >
+        {statusOptions.map(s => (
+          <option key={s} value={s}>
+            {s[0].toUpperCase() + s.slice(1)}
+          </option>
+        ))}
+      </select>
+    )
+  }
+
   return (
-    <Section title="Players" count={registrations.length} action={<PrimaryButton onClick={openPicker} className="w-12 text-2xl leading-none" aria-label="Add players">+</PrimaryButton>}>
+    <Card className="p-3 md:p-4">
+      <div className="flex gap-2">
+        <SearchInput value={q} onChange={e => setQ(e.target.value)} placeholder="Search players…" aria-label="Search participants" className="flex-1" />
+        <Button size="lg" onClick={openPicker} className="shrink-0">
+          <Plus />
+          <span className="max-sm:sr-only">Add player</span>
+        </Button>
+      </div>
+
       {registrations.length === 0 ? (
-        <p className="text-sm text-white/50 py-2">No players registered yet.</p>
+        <EmptyState className="mt-3" icon={Users} title="No players registered yet" description="Add players manually or wait for registrations." />
+      ) : visible.length === 0 ? (
+        <p className="py-6 text-center text-sm text-muted-foreground">No players match “{q}”.</p>
       ) : (
-        <ul className="divide-y divide-white/5">
-          {registrations.map(r => {
-            const p = ctx.profileMap.get(r.user_id)
-            const team = teamOf.get(r.user_id)
-            const statusOptions = ['approved', 'pending'].includes(r.status) ? ['approved', 'pending'] : [r.status, 'approved', 'pending']
-            return (
-              <li key={r.id} className="py-3">
-                <div className="flex items-start gap-3">
-                  <Avatar profile={p} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-white break-words">{fullName(p)}</p>
-                    <p className="text-xs text-white/50 break-all">{p?.email || 'no email'}</p>
-                    <div className="flex flex-wrap items-center gap-2 mt-1">
-                      <span className="text-[11px] font-mono text-white/50">{p?.player_code || 'no code'}</span>
-                      <LevelBadge level={p?.skill_level ?? null} />
-                      {team && (
-                        <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full" style={{ backgroundColor: 'rgba(255,107,53,0.15)', color: C.orange }}>
-                          {team}
-                        </span>
-                      )}
+        <>
+          {/* Desktop table */}
+          <div className="mt-3 hidden overflow-x-auto rounded-xl border border-border md:block">
+            <table className="w-full text-[15px]">
+              <caption className="sr-only">Participants ({registrations.length})</caption>
+              <thead>
+                <tr className="text-left text-xs uppercase tracking-wider text-subtle">
+                  <th scope="col" className="px-4 py-3 font-medium">Player</th>
+                  <th scope="col" className="whitespace-nowrap px-3 py-3 font-medium">Player code</th>
+                  <th scope="col" className="px-3 py-3 font-medium">Skill</th>
+                  <th scope="col" className="px-3 py-3 font-medium">Rating</th>
+                  <th scope="col" className="px-3 py-3 font-medium">Status</th>
+                  <th scope="col" className="px-3 py-3 text-right font-medium"><span className="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map(r => {
+                  const p = ctx.profileMap.get(r.user_id)
+                  const team = teamOf.get(r.user_id)
+                  return (
+                    <tr key={r.id} className="border-t border-border">
+                      <td className="px-4 py-2.5">
+                        <div className="flex max-w-[15rem] items-center gap-3 xl:max-w-[18rem]">
+                          <Avatar profile={p} size={36} />
+                          <div className="min-w-0">
+                            <p className="truncate font-display text-[17px] font-semibold leading-tight">{fullName(p)}</p>
+                            <p className="truncate text-xs text-muted-foreground">
+                              {p?.email || 'no email'}
+                              {team && <span className="text-primary-text"> · {team}</span>}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 tabular text-muted-foreground">{p?.player_code || '—'}</td>
+                      <td className="px-3 py-2.5"><SkillBadge level={p?.skill_level ?? null} /></td>
+                      <td className="px-3 py-2.5 font-display text-base font-semibold tabular">{p?.skill_score || '—'}</td>
+                      <td className="px-3 py-2.5">{statusSelect(r, 'min-h-10 text-sm')}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" className="size-10" onClick={() => ctx.editProfile(r.user_id)} disabled={!p} aria-label={`Edit ${fullName(p)}`}>
+                            <Pencil />
+                          </Button>
+                          <Button variant="danger" size="sm" onClick={() => remove(r)} disabled={busy === r.id}>
+                            <Trash2 />
+                            {busy === r.id ? '…' : 'Remove'}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Phone list */}
+          <ul className="mt-3 space-y-2 md:hidden">
+            {visible.map(r => {
+              const p = ctx.profileMap.get(r.user_id)
+              const team = teamOf.get(r.user_id)
+              return (
+                <li key={r.id} className="rounded-xl border border-border bg-pitch-850 p-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar profile={p} size={40} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-display text-[17px] font-semibold leading-tight">{fullName(p)}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {p?.player_code || 'no code'}
+                        {team && <span className="text-primary-text"> · {team}</span>}
+                      </p>
                     </div>
+                    <SkillBadge level={p?.skill_level ?? null} />
+                    <span className="w-10 text-right font-display text-base font-semibold tabular">{p?.skill_score || '—'}</span>
                   </div>
-                </div>
-                <div className="flex items-center gap-2 mt-2 pl-[52px]">
-                  <select
-                    value={r.status}
-                    disabled={busy === r.id}
-                    onChange={e => changeStatus(r, e.target.value)}
-                    className="min-h-11 flex-1 min-w-0 px-2 rounded-xl text-sm text-white outline-none"
-                    style={C.input}
-                    aria-label="Registration status"
-                  >
-                    {statusOptions.map(s => (
-                      <option key={s} value={s}>
-                        {s[0].toUpperCase() + s.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                  <GhostButton onClick={() => ctx.editProfile(r.user_id)} disabled={!p}>
-                    Edit
-                  </GhostButton>
-                  <GhostButton danger onClick={() => remove(r)} disabled={busy === r.id}>
-                    {busy === r.id ? '…' : 'Remove'}
-                  </GhostButton>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+                  <div className="mt-2 flex items-center gap-2">
+                    {statusSelect(r, 'flex-1 min-w-0')}
+                    <Button variant="ghost" size="icon" onClick={() => ctx.editProfile(r.user_id)} disabled={!p} aria-label={`Edit ${fullName(p)}`}>
+                      <Pencil />
+                    </Button>
+                    <Button variant="danger" size="icon" onClick={() => remove(r)} disabled={busy === r.id} aria-label={`Remove ${fullName(p)}`}>
+                      <Trash2 />
+                    </Button>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        </>
       )}
 
       <ProfilePicker
         open={pickerOpen}
         onClose={() => setPickerOpen(false)}
-        title="Add players"
+        title="Add player"
         profiles={ctx.profiles}
         multiple
         disabled={disabled}
         busy={busy === 'add'}
-        confirmLabel={n => (n === 0 ? 'Select players' : `Add ${n} player${n === 1 ? '' : 's'}`)}
+        confirmLabel={n => (n === 0 ? 'Select players' : n === 1 ? 'Add selected player' : `Add ${n} selected players`)}
         footerExtra={selected => (
           <>
+            {selected.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {selected.length} player{selected.length === 1 ? '' : 's'} selected
+              </p>
+            )}
             {ctx.capacityNote(isTeamFormat(event.format) ? 0 : selected.length)}
-            <label className="flex items-center gap-3 text-sm text-white/80 min-h-11 cursor-pointer">
-              <input type="checkbox" checked={sendEmail} onChange={e => setSendEmail(e.target.checked)} className="w-5 h-5 accent-[#ff6b35]" />
+            <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm">
+              <Checkbox checked={sendEmail} onCheckedChange={v => setSendEmail(v === true)} />
               Send confirmation email
             </label>
           </>
         )}
         onConfirm={add}
       />
-    </Section>
+    </Card>
   )
 }

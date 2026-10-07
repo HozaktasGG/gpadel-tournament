@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { AdminProfile } from './types'
 import { fullName, searchKey } from './types'
-import { Avatar, C, PrimaryButton, Sheet } from './ui'
+import { Check, Search } from 'lucide-react'
+import { Avatar, C, LevelBadge, PrimaryButton, Sheet, inputCls } from './ui'
 
 type Props = {
   open: boolean
@@ -83,24 +84,28 @@ export default function ProfilePicker({
         ) : undefined
       }
     >
-      <div className="sticky top-0 z-10 px-4 pb-3 pt-1" style={{ backgroundColor: C.card }}>
-        <input
-          type="search"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Search name, email or player code"
-          className="w-full h-12 px-4 rounded-xl text-base text-white outline-none"
-          style={C.input}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="none"
-          spellCheck={false}
-        />
-        <p className="text-[11px] text-white/40 mt-1.5">
+      <div className="sticky top-0 z-10 bg-popover px-5 pb-3 pt-1">
+        <div className="relative">
+          <Search aria-hidden className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-subtle" />
+          <input
+            type="search"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search name, email or player code"
+            aria-label="Search players"
+            className={`${inputCls} pl-12`}
+            style={C.input}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="none"
+            spellCheck={false}
+          />
+        </div>
+        <p className="mt-1.5 text-xs text-subtle">
           {results.length} of {profiles.length} players{multiple && selected.length > 0 ? ` · ${selected.length} selected` : ''}
         </p>
       </div>
-      <ul className="px-2 pb-3">
+      <ul className="space-y-1.5 px-3 pb-3">
         {results.map(p => {
           const reason = disabled?.get(p.id)
           const isSel = selected.includes(p.id)
@@ -110,30 +115,31 @@ export default function ProfilePicker({
                 type="button"
                 onClick={() => toggle(p.id)}
                 disabled={!!reason}
-                className="w-full flex items-center gap-3 px-2 py-2.5 rounded-xl text-left min-h-14 disabled:opacity-45"
-                style={isSel ? { backgroundColor: 'rgba(255,107,53,0.15)' } : undefined}
+                aria-pressed={multiple ? isSel : undefined}
+                className={`flex min-h-16 w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors disabled:opacity-45 ${isSel ? 'border-primary/40 bg-primary/10' : 'border-border bg-pitch-850 hover:bg-pitch-800'}`}
               >
-                <Avatar profile={p} size={36} />
+                <Avatar profile={p} size={44} />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-white truncate">{fullName(p)}</p>
-                  <p className="text-xs text-white/50 truncate">{p.email || 'no email'}</p>
-                  <p className="text-[11px] font-mono text-white/40">{p.player_code || 'no code'}</p>
+                  <p className="truncate font-display text-[17px] font-semibold leading-tight">{fullName(p)}</p>
+                  <p className="truncate text-xs text-muted-foreground">{p.player_code || 'no code'}</p>
                 </div>
+                <LevelBadge level={p.skill_level} />
+                <span className="w-10 shrink-0 text-right font-display text-base font-semibold tabular">{p.skill_score || '–'}</span>
                 {reason ? (
-                  <span className="text-[11px] font-semibold text-white/50 shrink-0 max-w-[40%] text-right">{reason}</span>
+                  <span className="max-w-[30%] shrink-0 text-right text-xs font-semibold text-muted-foreground">{reason}</span>
                 ) : multiple ? (
                   <span
-                    className="w-6 h-6 rounded-md shrink-0 flex items-center justify-center text-sm font-bold"
-                    style={isSel ? { backgroundColor: C.orange, color: '#fff' } : { border: '2px solid rgba(255,255,255,0.3)' }}
+                    aria-hidden
+                    className={`flex size-7 shrink-0 items-center justify-center rounded-full ${isSel ? 'bg-primary text-primary-foreground' : 'border-2 border-white/30'}`}
                   >
-                    {isSel ? '✓' : ''}
+                    {isSel && <Check className="size-4" strokeWidth={3} />}
                   </span>
                 ) : null}
               </button>
             </li>
           )
         })}
-        {results.length === 0 && <li className="text-sm text-white/50 text-center py-8">No players match “{query}”.</li>}
+        {results.length === 0 && <li className="py-8 text-center text-sm text-muted-foreground">No players match “{query}”.</li>}
       </ul>
     </Sheet>
   )

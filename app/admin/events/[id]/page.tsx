@@ -17,7 +17,7 @@ export default async function AdminEventPage({ params }: { params: { id: string 
 
   const { data: event } = await supabaseAdmin
     .from('events')
-    .select('id, name, date, time, location, max_players, entry_fee, description, format, status, image_url, pdf_url, registration_open')
+    .select('id, name, date, time, location, max_players, entry_fee, description, format, status, image_url, pdf_url, registration_open, featured, subtitle')
     .eq('id', eventId)
     .maybeSingle<AdminEvent>()
   if (!event) notFound()
@@ -35,7 +35,7 @@ export default async function AdminEventPage({ params }: { params: { id: string 
       .order('created_at', { ascending: true }),
     supabaseAdmin
       .from('profiles')
-      .select('id, first_name, last_name, email, player_code, skill_level, avatar_url')
+      .select('id, first_name, last_name, email, player_code, skill_level, skill_score, avatar_url')
       .order('first_name', { ascending: true }),
     supabaseAdmin.from('tournaments').select('id').eq('event_id', eventId),
     supabaseAdmin.from('team_tournament_groups').select('id', { count: 'exact', head: true }).eq('event_id', eventId),

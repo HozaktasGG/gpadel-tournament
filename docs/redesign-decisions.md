@@ -32,3 +32,12 @@ One line per non-trivial decision. Mockups: `design/01–04`.
 - Home drops the old leaderboard teaser / Why / About sections (mockup is discover-only); those pages stay in the avatar menu, profile links and footer.
 - Dashboard: "rating change" per result hidden (not reliably linked to events); shows Rank and the profile's last score change instead.
 - Phones have no account menu, so Admin / Leaderboard / About / Sign out live at the bottom of Profile.
+
+## Admin
+- Admin primitives in `app/admin/events/[id]/ui.tsx` keep their API but now use the shared sheet/dialog/sonner/avatar/badge, so Teams & picker logic is untouched.
+- No "Export PDF fixtures" generator exists: header shows "PDF" only when `pdf_url` is set; Fixtures tab links to the existing fixtures manager.
+- No bulk actions exist, so the mockup's row checkboxes are omitted.
+- Capacity stepper saves via the existing `updateEvent` action (only `max_players` changes); "Close registration" button folded into the switch (same confirm).
+- `featured` / `subtitle` editable in "Edit details" (approved earlier); `updateEvent` only writes them when the editor sends them.
+- Admin profiles column list gains `skill_score` (rating column in the table / Add player sheet).
+- Registration status select, Edit profile and Remove kept per row (mockup only shows Remove).
