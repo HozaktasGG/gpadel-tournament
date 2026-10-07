@@ -2,13 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens (Phase 1). RGB channels so Tailwind opacity modifiers work. */
 @layer base {
+  :root {
+    --green-950: 7 24 18; /* #071812 */
+    --green-900: 10 31 25; /* #0a1f19 */
+    --green-850: 13 38 32; /* #0d2620 */
+    --green-800: 18 48 42; /* #12302a */
+    --green-700: 26 61 46; /* #1a3d2e */
+    --green-600: 36 80 61; /* #24503d */
+
+    --background: var(--green-900);
+    --card: var(--green-850);
+    --popover: var(--green-800);
+    --secondary: var(--green-800);
+    --brand: var(--green-700);
+
+    --foreground: 244 247 245; /* #f4f7f5 */
+    --muted-foreground: 168 186 178; /* #a8bab2 */
+    --subtle: 138 161 152; /* #8aa198 */
+
+    --primary: 255 107 53; /* #ff6b35 */
+    --primary-hover: 255 125 77; /* #ff7d4d */
+    --primary-pressed: 232 90 38; /* #e85a26 */
+    --primary-foreground: 26 11 5; /* #1a0b05 */
+    --primary-text: 255 138 92; /* #ff8a5c */
+
+    --lime: 200 232 102; /* #c8e866 */
+    --success: 95 208 138; /* #5fd08a */
+    --success-solid: 60 165 92; /* #3ca55c */
+    --destructive: 242 118 106; /* #f2766a */
+
+    --skill-unranked: 197 205 202; /* #c5cdca */
+    --skill-unranked-bg: 32 42 40; /* #202a28 */
+    --skill-beginner: 95 176 248; /* #5fb0f8 */
+    --skill-intermediate: 200 232 102; /* #c8e866 */
+    --skill-advanced: 197 156 248; /* #c59cf8 */
+    --skill-ink: 11 26 20; /* #0b1a14 */
+
+    --format-americano: 20 128 90; /* #14805a */
+    --format-team: 93 82 160; /* #5d52a0 */
+
+    --medal-gold: 242 184 90; /* #f2b85a */
+    --medal-silver: 176 180 188; /* #b0b4bc */
+    --medal-bronze: 204 143 102; /* #cc8f66 */
+
+    --bottom-nav-h: 64px;
+    color-scheme: dark;
+  }
+
   html {
     scroll-behavior: smooth;
+    background-color: rgb(var(--background));
   }
-  html,
   body {
-    background-color: #1a3d2e;
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--primary-text));
+    outline-offset: 2px;
   }
 }
 
@@ -16,8 +70,32 @@
   .text-balance {
     text-wrap: balance;
   }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  /* Safe-area helpers (iPhone home indicator / notch). */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Legacy keyframe still used by existing pages. */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }

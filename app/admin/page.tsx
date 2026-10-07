@@ -710,6 +710,7 @@ export default function AdminPage() {
 
         {/* ── ALL EVENTS ── */}
         <section
+          id="events"
           className="rounded-2xl p-6 mb-8"
           style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
         >
@@ -798,6 +799,7 @@ export default function AdminPage() {
 
         {/* ── ALL USERS ── */}
         <section
+          id="players"
           className="rounded-2xl p-6 mb-8"
           style={{ backgroundColor: '#0f2a1f', border: '1px solid rgba(255,255,255,0.08)' }}
         >

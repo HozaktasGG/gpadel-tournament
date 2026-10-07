@@ -1,10 +1,20 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Barlow_Condensed, Inter } from 'next/font/google'
 import './globals.css'
-import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import { SiteHeader } from '@/components/nav/site-header'
+import { BottomNav, BottomNavSpacer } from '@/components/nav/bottom-nav'
+import { SessionProvider } from '@/components/nav/session-context'
+import { MotionProvider } from '@/components/motion'
+import { Toaster } from '@/components/ui/sonner'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' })
+const barlow = Barlow_Condensed({
+  subsets: ['latin'],
+  weight: ['500', '600', '700'],
+  variable: '--font-display',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'SmashTorino — Padel Community of Torino',
@@ -29,13 +39,18 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className="bg-[#1a3d2e]">
-      <body
-        className={`${inter.className} bg-[#1a3d2e] min-h-screen flex flex-col`}
-      >
-        <Navbar />
-        <div className="flex-1 flex flex-col">{children}</div>
-        <Footer />
+    <html lang="en" className={`${inter.variable} ${barlow.variable} bg-background`}>
+      <body className="flex min-h-dvh flex-col bg-background font-sans text-foreground">
+        <MotionProvider>
+          <SessionProvider>
+            <SiteHeader />
+            <div className="flex flex-1 flex-col">{children}</div>
+            <Footer />
+            <BottomNavSpacer />
+            <BottomNav />
+          </SessionProvider>
+          <Toaster />
+        </MotionProvider>
       </body>
     </html>
   )
