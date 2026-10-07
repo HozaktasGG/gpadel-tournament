@@ -1,7 +1,24 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
+import { CalendarDays, ChevronRight, Loader2, MapPin } from 'lucide-react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase-client'
+import { formatEventDate } from '@/lib/event-status'
+import { Avatar, AvatarPair } from '@/components/ui/avatar'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 
 type ProfileRow = {
   id: string
@@ -14,6 +31,8 @@ type EventRow = {
   id: string
   name: string | null
   date: string | null
+  time: string | null
+  location: string | null
 }
 
 type SentInvite = {
@@ -36,17 +55,7 @@ type ReceivedInvite = {
 
 type Props = {
   userId: string
-}
-
-function formatDate(dateStr: string | null): string {
-  if (!dateStr) return ''
-  try {
-    return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
-      day: 'numeric', month: 'long', year: 'numeric',
-    })
-  } catch {
-    return dateStr
-  }
+  me: { name: string; avatarUrl: string | null }
 }
 
 function fullName(p: ProfileRow | null | undefined, fallback = 'Player'): string {
@@ -54,38 +63,36 @@ function fullName(p: ProfileRow | null | undefined, fallback = 'Player'): string
   return [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || fallback
 }
 
-function Avatar({ profile, name }: { profile: ProfileRow | null | undefined; name: string }) {
-  if (profile?.avatar_url) {
-    return (
-      <img
-        src={profile.avatar_url}
-        alt={name}
-        width={40}
-        height={40}
-        className="rounded-full object-cover flex-shrink-0"
-        style={{ width: 40, height: 40 }}
-      />
-    )
-  }
-  const initial = (name[0] ?? '?').toUpperCase()
+function EventMeta({ ev }: { ev: EventRow | undefined }) {
+  if (!ev) return null
   return (
-    <span
-      className="flex-shrink-0 flex items-center justify-center rounded-full text-sm font-bold text-white bg-[#ff6b35]"
-      style={{ width: 40, height: 40 }}
-    >
-      {initial}
-    </span>
+    <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+      {ev.date && (
+        <span className="inline-flex items-center gap-1.5">
+          <CalendarDays className="size-4" aria-hidden />
+          {[formatEventDate(ev.date, 'short'), ev.time].filter(Boolean).join(' · ')}
+        </span>
+      )}
+      {ev.location && (
+        <span className="inline-flex items-center gap-1.5">
+          <MapPin className="size-4" aria-hidden />
+          {ev.location}
+        </span>
+      )}
+    </p>
   )
 }
 
-export default function TeamInvitesSection({ userId }: Props) {
-  const supabase = createClient()
+/** Partner invites: received (Accept / Decline) and sent (waiting, Cancel request). Same API routes as before. */
+export default function TeamInvitesSection({ userId, me }: Props) {
+  const supabase = useMemo(() => createClient(), [])
   const [loading, setLoading] = useState(true)
   const [sent, setSent] = useState<SentInvite[]>([])
   const [received, setReceived] = useState<ReceivedInvite[]>([])
   const [events, setEvents] = useState<EventRow[]>([])
   const [profiles, setProfiles] = useState<ProfileRow[]>([])
   const [actionId, setActionId] = useState<string | null>(null)
+  const [cancelId, setCancelId] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -113,31 +120,21 @@ export default function TeamInvitesSection({ userId }: Props) {
       const receivedRows = (receivedInvites ?? []) as ReceivedInvite[]
 
       const eventIds = Array.from(
-        new Set(
-          [...sentRows, ...receivedRows]
-            .map(r => r.event_id)
-            .filter((id): id is string => !!id)
-        )
+        new Set([...sentRows, ...receivedRows].map(r => r.event_id).filter((id): id is string => !!id))
       )
 
       const profileIds = Array.from(
         new Set(
-          [
-            ...sentRows.map(r => r.partner_id),
-            ...receivedRows.map(r => r.captain_id),
-          ].filter((id): id is string => !!id)
+          [...sentRows.map(r => r.partner_id), ...receivedRows.map(r => r.captain_id)].filter((id): id is string => !!id)
         )
       )
 
       const [{ data: eventsData }, { data: profilesData }] = await Promise.all([
         eventIds.length
-          ? supabase.from('events').select('id, name, date').in('id', eventIds)
+          ? supabase.from('events').select('id, name, date, time, location').in('id', eventIds)
           : Promise.resolve({ data: [] as EventRow[] }),
         profileIds.length
-          ? supabase
-              .from('profiles')
-              .select('id, first_name, last_name, avatar_url, player_code')
-              .in('id', profileIds)
+          ? supabase.from('profiles').select('id, first_name, last_name, avatar_url, player_code').in('id', profileIds)
           : Promise.resolve({ data: [] as ProfileRow[] }),
       ])
 
@@ -151,26 +148,29 @@ export default function TeamInvitesSection({ userId }: Props) {
     }
 
     load()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [userId, supabase])
 
   const getEvent = (id: string | null) => (id ? events.find(e => e.id === id) : undefined)
   const getProfile = (id: string | null) => (id ? profiles.find(p => p.id === id) : undefined)
 
   const handleCancel = async (id: string) => {
-    if (!confirm('Are you sure you want to cancel this team request?')) return
     setActionId(id)
     const res = await fetch('/api/team-registration/cancel', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ registration_id: id }),
     })
-    const data = await res.json().catch(() => ({} as { error?: string }))
+    const data = await res.json().catch(() => ({}) as { error?: string })
     setActionId(null)
+    setCancelId(null)
     if (!res.ok) {
-      alert(data.error || 'Action failed.')
+      toast.error(data.error || 'Action failed.')
       return
     }
+    toast.success('Team request cancelled')
     setSent(prev => prev.filter(s => s.id !== id))
   }
 
@@ -181,114 +181,109 @@ export default function TeamInvitesSection({ userId }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ registration_id: id, action }),
     })
-    const data = await res.json().catch(() => ({} as { error?: string }))
+    const data = await res.json().catch(() => ({}) as { error?: string })
     setActionId(null)
     if (!res.ok) {
-      alert(data.error || 'Action failed.')
+      toast.error(data.error || 'Action failed.')
       return
     }
+    toast.success(action === 'accept' ? 'Invite accepted — you’re on the team!' : 'Invite declined')
     setReceived(prev => prev.filter(r => r.id !== id))
   }
 
-  const totalCount = sent.length + received.length
+  if (loading) return <Skeleton className="mb-4 h-40 w-full rounded-2xl" />
+  if (sent.length === 0 && received.length === 0) return null
 
   return (
-    <section className="mt-10">
-      <h2 className="text-white font-bold text-lg mb-3">🎾 My Team Invites</h2>
-
-      {loading ? (
-        <p className="text-gray-400 text-sm text-center py-4">Loading...</p>
-      ) : totalCount === 0 ? (
-        <p className="text-gray-400 text-sm text-center py-4">No pending invites</p>
-      ) : (
-        <>
-          {received.map(inv => {
-            const captain = getProfile(inv.captain_id)
-            const event = getEvent(inv.event_id)
-            const captainName = fullName(captain, 'A player')
-            const isActing = actionId === inv.id
-            return (
-              <div
-                key={inv.id}
-                className="bg-[#0f2318] border border-[#2d5a40] rounded-xl p-4 mb-3"
-              >
-                <div className="flex items-start gap-3">
-                  <Avatar profile={captain} name={captainName} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white">
-                      <span className="font-bold">{captainName}</span>
-                      <span className="text-white/70"> invited you to </span>
-                      <span className="font-bold text-[#ff6b35]">{inv.team_name}</span>
-                    </p>
-                    <p className="text-gray-400 text-xs mt-1 truncate">
-                      {event?.name ?? '—'}
-                      {event?.date && ` · ${formatDate(event.date)}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-3">
-                  <button
-                    onClick={() => handleRespond(inv.id, 'accept')}
-                    disabled={isActing}
-                    className="flex-1 bg-green-500 hover:bg-green-600 transition text-white text-xs font-bold px-3 py-2 rounded-lg disabled:opacity-50"
-                  >
-                    {isActing ? '...' : '✅ Accept'}
-                  </button>
-                  <button
-                    onClick={() => handleRespond(inv.id, 'reject')}
-                    disabled={isActing}
-                    className="flex-1 border border-red-500 text-red-400 hover:bg-red-500/10 transition text-xs font-bold px-3 py-2 rounded-lg disabled:opacity-50"
-                  >
-                    {isActing ? '...' : '❌ Decline'}
-                  </button>
-                </div>
+    <div className="mb-4 space-y-3">
+      {received.map(inv => {
+        const ev = getEvent(inv.event_id)
+        const captain = getProfile(inv.captain_id)
+        const captainName = fullName(captain, 'Your partner')
+        const busy = actionId === inv.id
+        return (
+          <Card key={inv.id} className="border-primary/25 p-4">
+            <p className="flex items-center gap-2 font-display text-xl font-semibold">
+              <span className="size-2.5 rounded-full bg-primary" aria-hidden />
+              Partner invite
+            </p>
+            <div className="mt-3 flex items-start gap-3">
+              <Avatar src={captain?.avatar_url} name={captainName} size="lg" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-muted-foreground">
+                  <span className="text-foreground">{captainName}</span> invited you to
+                </p>
+                {ev ? (
+                  <Link href={`/tournaments/${ev.id}`} className="font-display text-[22px] font-semibold leading-tight hover:underline">
+                    {ev.name}
+                  </Link>
+                ) : (
+                  <p className="font-display text-[22px] font-semibold leading-tight">a tournament</p>
+                )}
+                <EventMeta ev={ev} />
               </div>
-            )
-          })}
+            </div>
+            <div className="mt-3 flex items-center gap-3 rounded-xl border border-border bg-pitch-850 px-3 py-2.5">
+              <span className="text-sm text-muted-foreground">Team preview</span>
+              <AvatarPair a={{ name: captainName, src: captain?.avatar_url }} b={{ name: me.name, src: me.avatarUrl }} size="sm" />
+              <span className="min-w-0 truncate font-medium">{inv.team_name}</span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Button variant="secondary" size="lg" disabled={busy} onClick={() => handleRespond(inv.id, 'reject')}>
+                Decline
+              </Button>
+              <Button size="lg" disabled={busy} onClick={() => handleRespond(inv.id, 'accept')}>
+                {busy && <Loader2 className="animate-spin" />}
+                Accept
+              </Button>
+            </div>
+          </Card>
+        )
+      })}
 
-          {sent.map(inv => {
-            const partner = getProfile(inv.partner_id)
-            const event = getEvent(inv.event_id)
-            const partnerName = fullName(partner, 'Partner')
-            const isActing = actionId === inv.id
-            const badge = { text: '⏳ Waiting for partner approval', bg: 'bg-yellow-500/15', color: 'text-yellow-400' }
-            return (
-              <div
-                key={inv.id}
-                className="bg-[#0f2318] border border-[#2d5a40] rounded-xl p-4 mb-3"
-              >
-                <div className="flex items-start gap-3">
-                  <Avatar profile={partner} name={partnerName} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-[#ff6b35] truncate">
-                      {inv.team_name}
-                    </p>
-                    <p className="text-gray-400 text-xs mt-0.5 truncate">
-                      <span className="text-white/60">Partner:</span> {partnerName}
-                    </p>
-                    <p className="text-gray-400 text-xs mt-0.5 truncate">
-                      {event?.name ?? '—'}
-                      {event?.date && ` · ${formatDate(event.date)}`}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-2 mt-3">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap ${badge.bg} ${badge.color}`}>
-                    {badge.text}
-                  </span>
-                  <button
-                    onClick={() => handleCancel(inv.id)}
-                    disabled={isActing}
-                    className="border border-red-500 text-red-400 hover:bg-red-500/10 transition text-sm font-semibold px-3 py-1 rounded-lg disabled:opacity-50"
-                  >
-                    {isActing ? '...' : '🗑 Cancel Request'}
-                  </button>
-                </div>
+      {sent.map(inv => {
+        const ev = getEvent(inv.event_id)
+        const partner = getProfile(inv.partner_id)
+        const partnerName = fullName(partner, 'your partner')
+        return (
+          <Card key={inv.id} className="p-4">
+            <div className="flex items-start gap-3">
+              <AvatarPair a={{ name: me.name, src: me.avatarUrl }} b={{ name: partnerName, src: partner?.avatar_url }} size="md" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm text-skill-intermediate">Waiting for {partnerName} to accept</p>
+                <p className="truncate font-display text-lg font-semibold leading-tight">{inv.team_name}</p>
+                {ev && (
+                  <Link href={`/tournaments/${ev.id}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+                    {ev.name}
+                    <ChevronRight className="size-4" aria-hidden />
+                  </Link>
+                )}
               </div>
-            )
-          })}
-        </>
-      )}
-    </section>
+            </div>
+            <Button variant="ghost" size="sm" className="mt-2 text-destructive" disabled={actionId === inv.id} onClick={() => setCancelId(inv.id)}>
+              Cancel request
+            </Button>
+          </Card>
+        )
+      })}
+
+      <Dialog open={!!cancelId} onOpenChange={o => !o && setCancelId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel team request?</DialogTitle>
+            <DialogDescription>Your partner invite will be withdrawn.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="secondary">Keep it</Button>
+            </DialogClose>
+            <Button onClick={() => cancelId && handleCancel(cancelId)} disabled={!!actionId}>
+              {actionId && <Loader2 className="animate-spin" />}
+              Yes, cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   )
 }

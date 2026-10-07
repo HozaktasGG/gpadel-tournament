@@ -1,15 +1,23 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
+import { CalendarDays, ChevronRight, ClipboardList, MapPin, Trophy } from 'lucide-react'
 import { createClient } from '@/lib/supabase-server'
-import { getLevel, getLevelColor } from '@/lib/quiz-questions'
+import { getLevel } from '@/lib/quiz-questions'
+import { formatEventDate } from '@/lib/event-status'
+import { loadPlayerEvents, loadPlayerResults, todayString, type PlayerEvent } from '@/lib/player-results'
+import { cn } from '@/lib/utils'
+import { Card } from '@/components/ui/card'
+import { Badge, SkillBadge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/ui/empty-state'
+import { EventThumb } from '@/components/event-thumb'
+import { FadeUpItem, Stagger } from '@/components/motion'
 import TeamInvitesSection from './team-invites-section'
 
 type Profile = {
   id: string
   first_name: string | null
   last_name: string | null
-  email: string | null
-  phone: string | null
   avatar_url: string | null
   skill_score: number | null
   skill_level: string | null
@@ -17,39 +25,32 @@ type Profile = {
   last_score_change: number | null
 }
 
-type EventRow = {
-  id: string
-  name: string
-  date: string
-  time: string | null
-  location: string | null
-  status: string
+export const metadata = { title: 'My dashboard · SmashTorino' }
+
+function registrationPill(ev: PlayerEvent) {
+  if (!ev.team) return <Badge variant="success" size="md"><span className="size-2 rounded-full bg-success" aria-hidden />Registered · Solo</Badge>
+  if (ev.team.status === 'approved') return <Badge variant="success" size="md"><span className="size-2 rounded-full bg-success" aria-hidden />Registered · Team</Badge>
+  const text = ev.team.status === 'pending_partner' ? 'Waiting for partner' : 'Waiting for approval'
+  return (
+    <Badge size="md" className="border-skill-intermediate/50 text-skill-intermediate">
+      <span className="size-2 rounded-full bg-skill-intermediate" aria-hidden />
+      {text} · Team
+    </Badge>
+  )
 }
 
-type RegistrationRow = {
-  id: string
-  event_id: string
-  status: string
-  events: EventRow | null
-}
-
-function todayString() {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.toISOString().split('T')[0]
-}
-
-function formatDateLabel(dateStr: string) {
-  try {
-    const d = new Date(dateStr + 'T00:00:00')
-    return d.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    })
-  } catch {
-    return dateStr
-  }
+function SectionHeader({ title, href, linkLabel = 'View all' }: { title: string; href?: string; linkLabel?: string }) {
+  return (
+    <div className="mb-3 flex items-center justify-between">
+      <h2 className="font-display text-2xl font-semibold">{title}</h2>
+      {href && (
+        <Link href={href} className="inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+          {linkLabel}
+          <ChevronRight className="size-4" aria-hidden />
+        </Link>
+      )}
+    </div>
+  )
 }
 
 export default async function DashboardPage() {
@@ -62,35 +63,14 @@ export default async function DashboardPage() {
 
   const { data: profileData } = await supabase
     .from('profiles')
-    .select(
-      'id, first_name, last_name, avatar_url, skill_score, skill_level, quiz_completed_at, last_score_change, player_code'
-    )
+    .select('id, first_name, last_name, avatar_url, skill_score, skill_level, quiz_completed_at, last_score_change, player_code')
     .eq('id', user.id)
     .maybeSingle()
   const profile = profileData as Profile | null
 
-  const { data: regData } = await supabase
-    .from('event_registrations')
-    .select(
-      'id, event_id, status, events(id, name, date, time, location, status)'
-    )
-    .eq('user_id', user.id)
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false })
-  const registrations = (regData ?? []) as unknown as RegistrationRow[]
-
-  const todayStr = todayString()
-  const upcoming = registrations.filter(
-    r => r.events && r.events.date >= todayStr
-  )
-  const past = registrations.filter(
-    r => r.events && r.events.date < todayStr
-  )
-
   const score = profile?.skill_score ?? 0
   const quizDone = !!profile?.quiz_completed_at
-  const level = quizDone ? getLevel(score) : '—'
-  const levelColor = quizDone ? getLevelColor(level) : null
+  const level = quizDone ? getLevel(score) : 'Unranked'
 
   let rank: number | null = null
   if (quizDone) {
@@ -102,283 +82,169 @@ export default async function DashboardPage() {
     rank = (higherCount ?? 0) + 1
   }
 
+  const events = await loadPlayerEvents(supabase, user.id, true)
+  const today = todayString()
+  const upcoming = events.filter(e => e.date >= today).sort((a, b) => (a.date < b.date ? -1 : 1))
+  const { results } = await loadPlayerResults(supabase, events)
+
   const firstName = profile?.first_name ?? user.email?.split('@')[0] ?? 'player'
+  const myName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ').trim() || firstName
+  const next = upcoming[0]
+  const change = profile?.last_score_change ?? 0
 
   return (
-    <main
-      className="flex-1 py-10 px-4 sm:px-6"
-      style={{ backgroundColor: '#1a3d2e' }}
-    >
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center gap-4">
-          {profile?.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt=""
-              width={64}
-              height={64}
-              className="rounded-full object-cover flex-shrink-0"
-              style={{ width: 64, height: 64 }}
-            />
-          ) : (
-            <span
-              className="flex-shrink-0 flex items-center justify-center rounded-full text-xl font-bold text-white"
-              style={{ width: 64, height: 64, backgroundColor: '#ff6b35' }}
-            >
-              {firstName[0]?.toUpperCase() ?? '?'}
-            </span>
-          )}
-          <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-white">
-              Welcome back, <span style={{ color: '#ff6b35' }}>{firstName}</span>!
-            </h1>
-            <p className="text-sm text-white/60 mt-1">
-              Here's your SmashTorino overview.
-            </p>
-          </div>
-        </div>
+    <main className="relative flex-1 overflow-hidden">
+      {/* Decorative court lines (from the mockup), purely visual */}
+      <svg aria-hidden className="pointer-events-none absolute -right-24 -top-10 h-72 w-[520px] text-lime/[0.07]" viewBox="0 0 520 288" fill="none">
+        <path d="M40 280 L300 20 L520 20" stroke="currentColor" strokeWidth="2" />
+        <path d="M140 280 L360 60 L520 60" stroke="currentColor" strokeWidth="2" />
+      </svg>
 
-        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <StatCard
-            label="Skill Score"
-            value={quizDone ? String(score) : '—'}
-            suffix={quizDone ? 'pts' : ''}
-          />
-          <StatCard
-            label="Level"
-            value={level}
-            badge={levelColor ?? undefined}
-          />
-          <StatCard label="Rank" value={rank != null ? `#${rank}` : '—'} />
-          <StatCard
-            label="Tournaments"
-            value={String(registrations.length)}
-            suffix="joined"
-          />
-        </div>
+      <div className="relative mx-auto max-w-[1100px] px-4 pb-10 pt-6 md:px-8 md:pt-10">
+        <header>
+          <h1 className="font-display text-[44px] font-bold leading-none md:text-hero-lg">Hey, {firstName}</h1>
+          <p className="mt-1 text-[17px] text-foreground/80">Ready for your next match?</p>
+        </header>
 
-        {!quizDone && (
-          <div
-            className="mt-8 rounded-2xl p-6 sm:p-7 flex flex-col sm:flex-row sm:items-center gap-4"
-            style={{
-              background:
-                'linear-gradient(135deg, rgba(255,107,53,0.15), rgba(255,107,53,0.04))',
-              border: '1px solid rgba(255,107,53,0.25)',
-            }}
-          >
-            <div className="flex-1">
-              <p
-                className="text-xs tracking-[0.2em] uppercase font-semibold"
-                style={{ color: '#ff6b35' }}
-              >
-                Get Started
-              </p>
-              <h2 className="text-lg font-bold text-white mt-1">
-                Take the skill assessment
-              </h2>
-              <p className="text-sm text-white/70 mt-1">
-                16 questions, ~3 minutes. Earn a score and unlock the leaderboard.
-              </p>
-            </div>
-            <Link
-              href="/quiz"
-              className="flex-shrink-0 px-6 py-3 rounded-full text-sm font-bold text-white text-center"
-              style={{ backgroundColor: '#ff6b35' }}
-            >
-              Take Skill Quiz →
-            </Link>
-          </div>
-        )}
+        <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
+          <div className="min-w-0">
+          {/* Renders nothing when there are no pending invites. */}
+          <TeamInvitesSection userId={user.id} me={{ name: myName, avatarUrl: profile?.avatar_url ?? null }} />
+          <Stagger className="space-y-4">
 
-        {profile?.last_score_change != null && profile.last_score_change !== 0 && (
-          <div
-            className="mt-6 rounded-xl p-4 flex items-center justify-between"
-            style={{
-              backgroundColor: '#0f2a1f',
-              border: '1px solid rgba(255,255,255,0.08)',
-            }}
-          >
-            <div>
-              <p className="text-xs text-white/50 font-semibold uppercase tracking-wide">
-                Recent score change
-              </p>
-              <p className="text-sm text-white/80 mt-0.5">
-                Your last tournament result
-              </p>
-            </div>
-            <span
-              className="px-3 py-1.5 rounded-full text-sm font-bold"
-              style={{
-                backgroundColor:
-                  profile.last_score_change > 0
-                    ? 'rgba(34,197,94,0.15)'
-                    : 'rgba(239,68,68,0.15)',
-                color: profile.last_score_change > 0 ? '#22c55e' : '#f87171',
-              }}
-            >
-              {profile.last_score_change > 0 ? '▲ +' : '▼ '}
-              {profile.last_score_change}
-            </span>
-          </div>
-        )}
+            {/* Upcoming */}
+            <FadeUpItem>
+              <Card className="p-4 md:p-5">
+                <SectionHeader title={upcoming.length > 1 ? 'Your upcoming events' : 'Your upcoming event'} href="/tournaments" />
+                {!next ? (
+                  <EmptyState
+                    icon={CalendarDays}
+                    title="Nothing booked yet"
+                    description="Find a tournament and grab a spot."
+                    action={
+                      <Button asChild>
+                        <Link href="/">Discover tournaments</Link>
+                      </Button>
+                    }
+                  />
+                ) : (
+                  <ul className="space-y-2">
+                    {upcoming.map((ev, i) => (
+                      <li key={ev.id}>
+                        <Link
+                          href={`/tournaments/${ev.id}`}
+                          className="flex items-center gap-3 rounded-xl border border-border bg-pitch-850 p-2.5 transition-colors active:bg-pitch-800"
+                        >
+                          <EventThumb imageUrl={ev.image_url} className={i === 0 ? 'size-24' : 'size-16'} badge={i === 0 ? 'size-7' : 'size-5'} />
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <p className={cn('truncate font-display font-semibold leading-tight', i === 0 ? 'text-[22px]' : 'text-lg')}>{ev.name}</p>
+                            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <CalendarDays className="size-4 shrink-0" aria-hidden />
+                              <span className="truncate">{[formatEventDate(ev.date, 'short'), ev.time].filter(Boolean).join(' · ')}</span>
+                            </p>
+                            {ev.location && (
+                              <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <MapPin className="size-4 shrink-0" aria-hidden />
+                                <span className="truncate">{ev.location}</span>
+                              </p>
+                            )}
+                            <div className="pt-0.5">{registrationPill(ev)}</div>
+                          </div>
+                          <ChevronRight className="size-5 shrink-0 text-subtle" aria-hidden />
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </FadeUpItem>
 
-        <section className="mt-10">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">Upcoming Tournaments</h2>
-            <Link
-              href="/tournaments"
-              className="text-sm font-semibold"
-              style={{ color: '#ff6b35' }}
-            >
-              Browse all →
-            </Link>
+            {/* Recent results */}
+            <FadeUpItem>
+              <Card className="p-4 md:p-5">
+                <SectionHeader title="Recent results" href={results.length > 3 ? '/profile' : undefined} />
+                {results.length === 0 ? (
+                  <EmptyState icon={Trophy} title="No results yet" description="Your tournaments show up here once they’re played." />
+                ) : (
+                  <ul className="space-y-2">
+                    {results.slice(0, 3).map(r => (
+                      <li key={r.id}>
+                        <Link
+                          href={`/tournaments/${r.id}`}
+                          className="flex min-h-[72px] items-center gap-3 rounded-xl border border-border bg-pitch-850 p-2.5 transition-colors active:bg-pitch-800"
+                        >
+                          <EventThumb imageUrl={r.image_url} className="size-14" badge="size-5" />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-display text-lg font-semibold leading-tight">
+                              {r.name}
+                              <span className="font-sans text-sm font-normal text-muted-foreground"> · {r.format ?? 'Americano'}</span>
+                            </p>
+                            <p className="truncate text-sm text-muted-foreground">
+                              {[r.location, formatEventDate(r.date, 'short')].filter(Boolean).join(' · ')}
+                            </p>
+                          </div>
+                          {r.placement && (
+                            <span
+                              className={cn(
+                                'shrink-0 text-right font-display text-lg font-semibold leading-tight',
+                                r.placement.rank === 1 ? 'text-medal-gold' : r.placement.rank === 2 ? 'text-medal-silver' : r.placement.rank === 3 ? 'text-medal-bronze' : 'text-foreground'
+                              )}
+                            >
+                              {r.placement.label}
+                            </span>
+                          )}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </FadeUpItem>
+          </Stagger>
           </div>
-          {upcoming.length === 0 ? (
-            <div
-              className="rounded-2xl p-8 text-center"
-              style={{
-                backgroundColor: '#0f2a1f',
-                border: '1px solid rgba(255,255,255,0.08)',
-              }}
-            >
-              <p className="text-sm text-white/70">
-                You're not signed up for any upcoming tournaments yet.
-              </p>
-              <Link
-                href="/tournaments"
-                className="inline-block mt-3 text-sm font-semibold"
-                style={{ color: '#ff6b35' }}
-              >
-                Find one →
+
+          {/* Rating */}
+          <Stagger className="space-y-4">
+            <FadeUpItem>
+              <Link href="/profile" className="block rounded-2xl border border-border bg-card p-4 shadow-card transition-colors hover:border-border-strong active:bg-pitch-800 md:p-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display text-2xl font-semibold">Your rating</h2>
+                  <ChevronRight className="size-5 text-subtle" aria-hidden />
+                </div>
+                <div className="mt-2 flex flex-wrap items-center gap-3">
+                  <p className="font-display text-[44px] font-bold leading-none tabular">{quizDone ? score : '—'}</p>
+                  <SkillBadge level={level} variant="solid" size="md" dot />
+                </div>
+                {(rank !== null || change !== 0) && (
+                  <p className="mt-2 flex flex-wrap gap-x-4 text-sm text-muted-foreground">
+                    {rank !== null && <span>Rank #{rank} in Turin</span>}
+                    {change !== 0 && (
+                      <span className={change > 0 ? 'text-success' : 'text-destructive'}>
+                        {change > 0 ? `+${change}` : change} last change
+                      </span>
+                    )}
+                  </p>
+                )}
               </Link>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {upcoming.map(r => (
+            </FadeUpItem>
+            {!quizDone && (
+              <FadeUpItem>
                 <Link
-                  key={r.id}
-                  href={`/tournaments/${r.event_id}`}
-                  className="block rounded-xl p-4 sm:p-5 transition hover:bg-white/[0.04]"
-                  style={{
-                    backgroundColor: '#0f2a1f',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}
+                  href="/quiz"
+                  className="flex min-h-[72px] items-center gap-3 rounded-2xl border border-primary/30 bg-card p-4 shadow-card transition-colors active:bg-pitch-800"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-base font-bold text-white">
-                        {r.events?.name}
-                      </p>
-                      <p className="text-xs text-white/60 mt-1">
-                        {r.events && formatDateLabel(r.events.date)}
-                        {r.events?.time && ` · ${r.events.time}`}
-                        {r.events?.location && ` · ${r.events.location}`}
-                      </p>
-                    </div>
-                    <span
-                      className="text-[10px] font-bold tracking-wider uppercase px-2 py-1 rounded-full flex-shrink-0 ml-3"
-                      style={{
-                        backgroundColor:
-                          r.events?.status === 'active'
-                            ? 'rgba(34,197,94,0.15)'
-                            : 'rgba(34,197,94,0.15)',
-                        color: '#22c55e',
-                      }}
-                    >
-                      {r.events?.status === 'active' ? '● Live' : 'Registered'}
-                    </span>
+                  <ClipboardList className="size-6 shrink-0 text-primary-text" aria-hidden />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-lg font-semibold leading-tight">Get your skill level</p>
+                    <p className="text-sm text-muted-foreground">16 questions, about 3 minutes</p>
                   </div>
+                  <ChevronRight className="size-5 shrink-0 text-subtle" aria-hidden />
                 </Link>
-              ))}
-            </div>
-          )}
-        </section>
-
-        <TeamInvitesSection userId={user.id} />
-
-        {past.length > 0 && (
-          <section className="mt-10">
-            <h2 className="text-xl font-bold text-white mb-4">Past Tournaments</h2>
-            <div className="space-y-3">
-              {past.map(r => (
-                <Link
-                  key={r.id}
-                  href={`/tournaments/${r.event_id}`}
-                  className="block rounded-xl p-4 sm:p-5 transition hover:bg-white/[0.04]"
-                  style={{
-                    backgroundColor: '#0f2a1f',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-base font-semibold text-white/90">
-                        {r.events?.name}
-                      </p>
-                      <p className="text-xs text-white/50 mt-1">
-                        {r.events && formatDateLabel(r.events.date)}
-                      </p>
-                    </div>
-                    <span
-                      className="text-[10px] font-bold tracking-wider uppercase px-2 py-1 rounded-full"
-                      style={{
-                        backgroundColor: 'rgba(255,255,255,0.06)',
-                        color: 'rgba(255,255,255,0.5)',
-                      }}
-                    >
-                      Finished
-                    </span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
+              </FadeUpItem>
+            )}
+          </Stagger>
+        </div>
       </div>
     </main>
-  )
-}
-
-function StatCard({
-  label,
-  value,
-  suffix,
-  badge,
-}: {
-  label: string
-  value: string
-  suffix?: string
-  badge?: { bg: string; text: string; icon?: string }
-}) {
-  return (
-    <div
-      className="rounded-2xl p-4"
-      style={{
-        backgroundColor: '#0f2a1f',
-        border: '1px solid rgba(255,255,255,0.08)',
-      }}
-    >
-      <p className="text-[10px] tracking-[0.2em] uppercase font-semibold text-white/50">
-        {label}
-      </p>
-      {badge ? (
-        <div
-          className="inline-flex items-center gap-1 mt-2 px-3 py-1 rounded-full text-sm font-bold"
-          style={{ background: badge.bg, color: badge.text }}
-        >
-          {badge.icon && <span>{badge.icon}</span>}
-          <span>{value}</span>
-        </div>
-      ) : (
-        <p className="text-2xl font-bold text-white mt-1 leading-tight">
-          {value}
-          {suffix && (
-            <span className="text-xs text-white/40 font-semibold ml-1">
-              {suffix}
-            </span>
-          )}
-        </p>
-      )}
-    </div>
   )
 }
