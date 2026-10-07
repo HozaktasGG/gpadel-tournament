@@ -41,3 +41,8 @@ One line per non-trivial decision. Mockups: `design/01–04`.
 - `featured` / `subtitle` editable in "Edit details" (approved earlier); `updateEvent` only writes them when the editor sends them.
 - Admin profiles column list gains `skill_score` (rating column in the table / Add player sheet).
 - Registration status select, Edit profile and Remove kept per row (mockup only shows Remove).
+
+## Auth
+- Sign in / sign up / account setup share `components/auth/auth-shell.tsx` (court photo, card, Google button); Supabase auth calls unchanged.
+- The old "Forgot password?" link pointed to a non-existent `/forgot-password` route (404), so it was removed; a reset flow would be new auth logic.
+- `/signin?error=admin_required` now shows a short "organizers only" message (UI text only).

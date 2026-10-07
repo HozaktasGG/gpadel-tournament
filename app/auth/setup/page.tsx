@@ -1,11 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Loader2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase-client'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
+import { AuthShell, Field, FormError } from '@/components/auth/auth-shell'
 
 export default function AuthSetupPage() {
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const router = useRouter()
 
   const [checking, setChecking] = useState(true)
@@ -52,85 +57,30 @@ export default function AuthSetupPage() {
 
   if (checking) {
     return (
-      <main
-        className="flex-1 flex items-center justify-center"
-        style={{ backgroundColor: '#1a3d2e' }}
-      >
-        <p className="text-sm text-white/70">Preparing your account...</p>
+      <main className="mx-auto w-full max-w-md flex-1 space-y-4 px-4 py-10" aria-busy="true">
+        <p className="sr-only">Preparing your account…</p>
+        <Skeleton className="h-10 w-2/3" />
+        <Skeleton className="h-64 w-full rounded-2xl" />
       </main>
     )
   }
 
   return (
-    <main
-      className="flex-1 flex items-center justify-center py-12 px-4"
-      style={{ backgroundColor: '#1a3d2e' }}
-    >
-      <div
-        className="w-full max-w-md rounded-2xl overflow-hidden"
-        style={{
-          backgroundColor: '#0f2a1f',
-          border: '1px solid rgba(255,255,255,0.08)',
-        }}
-      >
-        <div className="px-7 pt-8 pb-4 text-center">
-          <div className="text-3xl mb-2">🎾</div>
-          <h1 className="text-2xl font-bold text-white">
-            Welcome to SmashTorino
-          </h1>
-          <p className="text-sm text-white/60 mt-2">
-            Set a password to finish setting up <span className="text-white">{email}</span>
-          </p>
-        </div>
-        <form onSubmit={handleSubmit} className="px-7 pb-7 pt-2 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-white/70 mb-1.5">
-              New password
-            </label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={e => setNewPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white outline-none"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.1)',
-              }}
-            />
-            <p className="text-[11px] text-white/40 mt-1">At least 6 characters.</p>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-white/70 mb-1.5">
-              Confirm password
-            </label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              required
-              minLength={6}
-              className="w-full px-3.5 py-2.5 rounded-lg text-sm text-white outline-none"
-              style={{
-                backgroundColor: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.1)',
-              }}
-            />
-          </div>
-
-          {error && <p className="text-xs text-red-300">{error}</p>}
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full py-3 rounded-xl text-sm font-bold text-white transition disabled:opacity-50"
-            style={{ backgroundColor: '#ff6b35' }}
-          >
-            {saving ? 'Setting up...' : 'Set Password & Continue'}
-          </button>
-        </form>
-      </div>
-    </main>
+    <AuthShell title="Welcome to SmashTorino" subtitle={`Set a password to finish setting up ${email}`}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Field label="New password" htmlFor="new-password">
+          <Input id="new-password" type="password" autoComplete="new-password" required minLength={6} value={newPassword} onChange={e => setNewPassword(e.target.value)} />
+          <p className="text-xs text-subtle">At least 6 characters.</p>
+        </Field>
+        <Field label="Confirm password" htmlFor="confirm-password">
+          <Input id="confirm-password" type="password" autoComplete="new-password" required minLength={6} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
+        </Field>
+        <FormError>{error}</FormError>
+        <Button type="submit" size="lg" block disabled={saving}>
+          {saving && <Loader2 className="animate-spin" />}
+          {saving ? 'Saving…' : 'Save password'}
+        </Button>
+      </form>
+    </AuthShell>
   )
 }
