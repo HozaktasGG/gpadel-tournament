@@ -106,15 +106,31 @@ function buildConfirmationEmail(args: {
 }
 
 async function sendConfirmationEmails(registrationId: string, teamName: string) {
-  const { data } = await supabaseAdmin
+  // No FK from team_registrations.captain_id/partner_id to profiles, so profiles are fetched separately.
+  const { data: reg } = await supabaseAdmin
     .from('team_registrations')
-    .select(
-      'id, team_name, event:events(name, date, time, location, description), captain:profiles!team_registrations_captain_id_fkey(first_name, last_name, email, player_code), partner:profiles!team_registrations_partner_id_fkey(first_name, last_name, email, player_code)'
-    )
+    .select('id, team_name, captain_id, partner_id, event:events(name, date, time, location, description)')
     .eq('id', registrationId)
-    .single<FullRegistrationRaw>()
+    .single<Omit<FullRegistrationRaw, 'captain' | 'partner'> & { captain_id: string | null; partner_id: string | null }>()
 
-  if (!data) return
+  if (!reg) return
+
+  const memberIds = [reg.captain_id, reg.partner_id].filter((x): x is string => !!x)
+  const { data: members } = memberIds.length
+    ? await supabaseAdmin
+        .from('profiles')
+        .select('id, first_name, last_name, email, player_code')
+        .in('id', memberIds)
+    : { data: [] }
+  const memberById = new Map(((members ?? []) as (ProfileEmbed & { id: string })[]).map(p => [p.id, p]))
+
+  const data: FullRegistrationRaw = {
+    id: reg.id,
+    team_name: reg.team_name,
+    event: reg.event,
+    captain: (reg.captain_id && memberById.get(reg.captain_id)) || null,
+    partner: (reg.partner_id && memberById.get(reg.partner_id)) || null,
+  }
 
   const event = unwrap(data.event)
   const captain = unwrap(data.captain)

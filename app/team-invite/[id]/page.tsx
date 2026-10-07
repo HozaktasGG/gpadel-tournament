@@ -98,11 +98,10 @@ export default function TeamInvitePage() {
         return
       }
 
+      // No FK from team_registrations.captain_id to profiles, so the captain is fetched separately.
       const { data, error: fetchError } = await supabase
         .from('team_registrations')
-        .select(
-          'id, team_name, status, partner_confirmed, event:events(name, date, location), captain:profiles!team_registrations_captain_id_fkey(first_name, last_name, avatar_url, player_code)'
-        )
+        .select('id, team_name, status, partner_confirmed, captain_id, event:events(name, date, location)')
         .eq('id', id)
         .single()
 
@@ -114,7 +113,18 @@ export default function TeamInvitePage() {
         return
       }
 
-      const raw = data as unknown as RawRegistration
+      const { captain_id, ...rest } = data as unknown as Omit<RawRegistration, 'captain'> & { captain_id: string | null }
+      const { data: captainData } = captain_id
+        ? await supabase
+            .from('profiles')
+            .select('first_name, last_name, avatar_url, player_code')
+            .eq('id', captain_id)
+            .maybeSingle()
+        : { data: null }
+
+      if (cancelled) return
+
+      const raw: RawRegistration = { ...rest, captain: (captainData as CaptainEmbed | null) ?? null }
       const reg: Registration = {
         id: raw.id,
         team_name: raw.team_name,

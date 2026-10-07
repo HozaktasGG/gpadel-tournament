@@ -192,14 +192,36 @@ export default function AdminPage() {
 
   const fetchTeamRegs = async () => {
     setTeamRegsLoading(true)
+    // No FK from team_registrations.captain_id/partner_id to profiles, so profiles are fetched separately.
     const { data } = await supabaseBrowser
       .from('team_registrations')
-      .select(
-        'id, team_name, status, created_at, captain:profiles!team_registrations_captain_id_fkey(first_name, last_name, email, player_code), partner:profiles!team_registrations_partner_id_fkey(first_name, last_name, email, player_code), event:events(name)'
-      )
+      .select('id, team_name, status, created_at, captain_id, partner_id, event:events(name)')
       .order('created_at', { ascending: false })
 
-    const rows = ((data ?? []) as unknown as TeamRegRaw[]).map<TeamReg>(r => ({
+    const teamRows = (data ?? []) as unknown as (Omit<TeamRegRaw, 'captain' | 'partner'> & {
+      captain_id: string | null
+      partner_id: string | null
+    })[]
+    const memberIds = Array.from(
+      new Set(teamRows.flatMap(r => [r.captain_id, r.partner_id]).filter((x): x is string => !!x))
+    )
+    const { data: memberData } = memberIds.length
+      ? await supabaseBrowser
+          .from('profiles')
+          .select('id, first_name, last_name, email, player_code')
+          .in('id', memberIds)
+      : { data: [] }
+    const memberById = new Map(
+      ((memberData ?? []) as (TeamMemberEmbed & { id: string })[]).map(p => [p.id, p])
+    )
+
+    const rows = teamRows
+      .map<TeamRegRaw>(({ captain_id, partner_id, ...r }) => ({
+        ...r,
+        captain: (captain_id && memberById.get(captain_id)) || null,
+        partner: (partner_id && memberById.get(partner_id)) || null,
+      }))
+      .map<TeamReg>(r => ({
       id: r.id,
       team_name: r.team_name,
       status: r.status,
