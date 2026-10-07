@@ -59,6 +59,37 @@
     background-color: rgb(var(--background));
     color: rgb(var(--foreground));
     -webkit-font-smoothing: antialiased;
+    /* Landscape iPhone: keep content clear of the notch / Dynamic Island. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* iOS: our own :active states replace the grey tap flash. */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* No double-tap-to-zoom delay on controls (pinch zoom still works). */
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  label,
+  summary,
+  [role='button'],
+  [role='tab'] {
+    touch-action: manipulation;
+  }
+
+  /* iOS Safari zooms into any focused field under 16px. Older pages use
+     text-sm inputs, so enforce the floor on touch devices. */
+  @media (pointer: coarse) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+    select,
+    textarea {
+      font-size: max(16px, 1em) !important;
+    }
   }
   :focus-visible {
     outline: 2px solid rgb(var(--primary-text));

@@ -51,7 +51,7 @@ export default function QuizForm({ userId, firstName }: Props) {
   if (result) {
     const levelColor = getLevelColor(result.level)
     return (
-      <main className="min-h-screen py-8 px-4 sm:py-12" style={{ backgroundColor: '#1a3d2e' }}>
+      <main className="min-h-dvh py-8 px-4 sm:py-12" style={{ backgroundColor: '#1a3d2e' }}>
         <div className="max-w-md mx-auto">
           <div className="flex flex-col items-center mb-6">
             <img src="/smashpadel_logo.png" alt="Smash Padel" width={72} height={72} className="rounded-full mb-3" />
@@ -107,7 +107,7 @@ export default function QuizForm({ userId, firstName }: Props) {
   }
 
   return (
-    <main className="min-h-screen py-6 px-4 sm:py-10" style={{ backgroundColor: '#1a3d2e' }}>
+    <main className="min-h-dvh py-6 px-4 sm:py-10" style={{ backgroundColor: '#1a3d2e' }}>
       <div className="max-w-2xl mx-auto">
         <div className="flex flex-col items-center mb-6">
           <img src="/smashpadel_logo.png" alt="Smash Padel" width={72} height={72} className="rounded-full mb-3" />

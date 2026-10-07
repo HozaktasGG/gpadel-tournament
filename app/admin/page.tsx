@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { getLevel, getLevelColor } from '@/lib/quiz-questions'
 import { createClient } from '@/lib/supabase-client'
+import { useScrollLock } from '@/lib/use-scroll-lock'
 
 type UserRow = {
   id: string
@@ -134,6 +135,7 @@ export default function AdminPage() {
   const [createMsg, setCreateMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [creating, setCreating] = useState(false)
   const [editingEvent, setEditingEvent] = useState<EventRow | null>(null)
+  useScrollLock(!!editingEvent || !!selectedUser)
   const [eventActionLoading, setEventActionLoading] = useState<string | null>(null)
 
   const [teamRegs, setTeamRegs] = useState<TeamReg[]>([])
@@ -504,7 +506,7 @@ export default function AdminPage() {
   const pending = eventRegs.filter(r => r.status !== 'approved').length
 
   return (
-    <main className="min-h-screen p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
+    <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
       <div className="max-w-6xl mx-auto">
 
         {/* Header */}

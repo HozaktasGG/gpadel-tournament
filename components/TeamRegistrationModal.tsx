@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
+import { useScrollLock } from '@/lib/use-scroll-lock'
 
 type Props = {
   eventId: string
@@ -39,6 +40,7 @@ function normalizeCode(raw: string): string {
 export default function TeamRegistrationModal({ eventId, eventName, onClose, onSuccess }: Props) {
   const supabase = createClient()
   const [step, setStep] = useState<1 | 2>(1)
+  useScrollLock(true)
   const [teamName, setTeamName] = useState('')
   const [partnerCode, setPartnerCode] = useState('')
   const [partner, setPartner] = useState<PartnerPreview | null>(null)

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { getLevelColor } from '@/lib/quiz-questions'
+import { useScrollLock } from '@/lib/use-scroll-lock'
 import type { AdminProfile } from './types'
 import { fullName } from './types'
 
@@ -33,16 +34,12 @@ export function Sheet({
   footer?: ReactNode
   tall?: boolean
 }) {
+  useScrollLock(open)
   useEffect(() => {
     if (!open) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
-    return () => {
-      document.body.style.overflow = prev
-      window.removeEventListener('keydown', onKey)
-    }
+    return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
   if (!open) return null
@@ -88,6 +85,7 @@ type ConfirmState = ConfirmOptions & { resolve: (v: { ok: boolean; checked: bool
 export function useConfirm() {
   const [state, setState] = useState<ConfirmState | null>(null)
   const [checked, setChecked] = useState(false)
+  useScrollLock(!!state)
 
   const ask = useCallback(
     (opts: ConfirmOptions) =>

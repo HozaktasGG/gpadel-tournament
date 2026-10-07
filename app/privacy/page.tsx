@@ -1,6 +1,6 @@
 export default function PrivacyPolicy() {
   return (
-    <main className="min-h-screen bg-white p-6 sm:p-12">
+    <main className="min-h-dvh bg-white p-6 sm:p-12">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold text-black mb-8">Privacy Policy</h1>
 

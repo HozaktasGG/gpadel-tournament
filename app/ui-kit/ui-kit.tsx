@@ -19,6 +19,7 @@ import { Input, SearchInput } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Checkbox } from '@/components/ui/checkbox'
 import { FadeUpItem, FlipNumber, Stagger } from '@/components/motion'
+import { AddToCalendarButton, ShareEventButton } from '@/components/event-actions'
 
 // Placeholder names only to exercise layouts; no real data.
 const sample = ['Player One', 'Player Two', 'Player Three', 'Player Four']
@@ -153,6 +154,8 @@ export function UiKit() {
               </DialogContent>
             </Dialog>
             <Button variant="subtle" onClick={() => toast.success('Link copied', { description: 'Share it with your partner.' })}>Toast</Button>
+            <ShareEventButton title="Sample event" url="/tournaments" />
+            <AddToCalendarButton event={{ id: 'ui-kit-sample', name: 'Sample event', date: '2026-10-10', time: '18:30', location: 'Sample venue, Turin', url: '/tournaments' }} />
           </div>
           <Card className="flex items-center justify-between p-4">
             <span className="font-display text-score font-bold"><FlipNumber value={score} /> : 10</span>

@@ -45,7 +45,7 @@ function ParticipantsContent() {
   }, [token])
 
   return (
-    <main className="min-h-screen bg-white p-6 sm:p-12">
+    <main className="min-h-dvh bg-white p-6 sm:p-12">
       <div className="max-w-md mx-auto">
         <div className="flex justify-center mb-10">
           <img
@@ -94,7 +94,7 @@ function ParticipantsContent() {
 export default function ParticipantsPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-white flex items-center justify-center">
+      <main className="min-h-dvh bg-white flex items-center justify-center">
         <p className="text-sm text-gray-500">Loading...</p>
       </main>
     }>

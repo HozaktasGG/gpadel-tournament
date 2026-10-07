@@ -70,7 +70,7 @@ export default function RegisterPage() {
   const remaining = CAPACITY - participants.length
 
   return (
-    <main className="min-h-screen bg-white p-6 sm:p-12">
+    <main className="min-h-dvh bg-white p-6 sm:p-12">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-center mb-10">
           <img

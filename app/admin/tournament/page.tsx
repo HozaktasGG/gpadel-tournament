@@ -42,7 +42,7 @@ export default function AdminTournamentPage() {
   if (selected) {
     if (selected.format === 'Team Americano') {
       return (
-        <main className="min-h-screen p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
+        <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
           <TeamAmericanoManager
             eventId={selected.id}
             eventName={selected.name}
@@ -53,7 +53,7 @@ export default function AdminTournamentPage() {
     }
     if (selected.format === 'Team') {
       return (
-        <main className="min-h-screen p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
+        <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
           <TeamManager
             eventId={selected.id}
             eventName={selected.name}
@@ -63,14 +63,14 @@ export default function AdminTournamentPage() {
       )
     }
     return (
-      <main className="min-h-screen p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
+      <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
         <AmericanoManager eventId={selected.id} onBack={() => setSelected(null)} />
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
+    <main className="min-h-dvh p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">

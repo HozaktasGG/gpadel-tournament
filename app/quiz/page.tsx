@@ -23,7 +23,7 @@ export default async function QuizPage() {
     const levelColor = getLevelColor(level)
 
     return (
-      <main className="min-h-screen py-8 px-4 sm:py-12" style={{ backgroundColor: '#1a3d2e' }}>
+      <main className="min-h-dvh py-8 px-4 sm:py-12" style={{ backgroundColor: '#1a3d2e' }}>
         <div className="max-w-md mx-auto">
           <div className="flex flex-col items-center mb-6">
             <img src="/smashpadel_logo.png" alt="Smash Padel" width={72} height={72} className="rounded-full mb-3" />

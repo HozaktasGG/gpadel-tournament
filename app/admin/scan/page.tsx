@@ -143,7 +143,7 @@ export default function AdminScanPage() {
   const checkedInCount = list.filter(r => r.checked_in).length
 
   return (
-    <main className="min-h-screen bg-white p-6 sm:p-12">
+    <main className="min-h-dvh bg-white p-6 sm:p-12">
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">

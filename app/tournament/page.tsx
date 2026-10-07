@@ -107,7 +107,7 @@ export default function TournamentPage() {
 
   if (loading && !state) {
     return (
-      <main className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#1a3d2e' }}>
+      <main className="min-h-dvh flex items-center justify-center" style={{ backgroundColor: '#1a3d2e' }}>
         <p className="text-sm text-white/70">Loading...</p>
       </main>
     )
@@ -115,7 +115,7 @@ export default function TournamentPage() {
 
   if (!state?.tournament) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: '#1a3d2e' }}>
+      <main className="min-h-dvh flex items-center justify-center p-6" style={{ backgroundColor: '#1a3d2e' }}>
         <div className="max-w-md w-full text-center">
           <div className="flex justify-center mb-6">
             <img src="/smashpadel_logo.png" alt="Smash Padel" width={80} height={80} className="rounded-full" />
@@ -136,7 +136,7 @@ export default function TournamentPage() {
   const isLive = tournament.status === 'active' || tournament.status === 'live' || tournament.status === 'in_progress'
 
   return (
-    <main className="min-h-screen py-8 px-4 sm:py-12" style={{ backgroundColor: '#1a3d2e' }}>
+    <main className="min-h-dvh py-8 px-4 sm:py-12" style={{ backgroundColor: '#1a3d2e' }}>
       <div className="max-w-2xl mx-auto">
         <div className="flex flex-col items-center mb-8">
           <img src="/smashpadel_logo.png" alt="Smash Padel" width={72} height={72} className="rounded-full mb-3" />

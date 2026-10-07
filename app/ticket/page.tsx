@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { useScrollLock } from '@/lib/use-scroll-lock'
 
 type Ticket = {
   id: string
@@ -24,6 +25,7 @@ function TicketContent() {
   const [ticket, setTicket] = useState<Ticket | null>(null)
   const [errorMsg, setErrorMsg] = useState('')
   const [saveHelpOpen, setSaveHelpOpen] = useState(false)
+  useScrollLock(saveHelpOpen)
   const called = useRef(false)
 
   useEffect(() => {
@@ -55,7 +57,7 @@ function TicketContent() {
 
   if (status === 'loading') {
     return (
-      <main className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#1a3d2e' }}>
+      <main className="min-h-dvh flex items-center justify-center" style={{ backgroundColor: '#1a3d2e' }}>
         <p className="text-sm text-white/70">Loading ticket...</p>
       </main>
     )
@@ -63,7 +65,7 @@ function TicketContent() {
 
   if (status === 'error' || !ticket) {
     return (
-      <main className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: '#1a3d2e' }}>
+      <main className="min-h-dvh flex items-center justify-center p-6" style={{ backgroundColor: '#1a3d2e' }}>
         <div className="max-w-md w-full text-center">
           <div className="flex justify-center mb-8">
             <img src="/smashpadel_logo.png" alt="Smash Padel" width={80} height={80} className="rounded-full" />
@@ -82,7 +84,7 @@ function TicketContent() {
   const showSaveHelp = () => setSaveHelpOpen(true)
 
   return (
-    <main className="min-h-screen py-8 px-4 sm:py-12" style={{ backgroundColor: '#1a3d2e' }}>
+    <main className="min-h-dvh py-8 px-4 sm:py-12" style={{ backgroundColor: '#1a3d2e' }}>
       <div className="max-w-md mx-auto">
         {/* Header */}
         <div className="flex flex-col items-center mb-6">
@@ -221,7 +223,7 @@ export default function TicketPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#1a3d2e' }}>
+        <main className="min-h-dvh flex items-center justify-center" style={{ backgroundColor: '#1a3d2e' }}>
           <p className="text-sm text-white/70">Loading...</p>
         </main>
       }

@@ -47,7 +47,7 @@ function CancelContent() {
   }
 
   return (
-    <main className="min-h-screen bg-white flex items-center justify-center p-6">
+    <main className="min-h-dvh bg-white flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center">
         <div className="flex justify-center mb-8">
           <img
@@ -117,7 +117,7 @@ function CancelContent() {
 export default function CancelPage() {
   return (
     <Suspense fallback={
-      <main className="min-h-screen bg-white flex items-center justify-center">
+      <main className="min-h-dvh bg-white flex items-center justify-center">
         <p className="text-sm text-gray-500">Loading...</p>
       </main>
     }>

@@ -154,7 +154,7 @@ export default function TeamInvitePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#0f2318]">
+      <main className="min-h-dvh flex items-center justify-center bg-[#0f2318]">
         <div
           className="w-10 h-10 border-4 rounded-full animate-spin"
           style={{ borderColor: '#2d5a40', borderTopColor: '#ff6b35' }}
@@ -165,7 +165,7 @@ export default function TeamInvitePage() {
 
   if (error && !registration) {
     return (
-      <main className="min-h-screen flex items-center justify-center px-4 bg-[#0f2318]">
+      <main className="min-h-dvh flex items-center justify-center px-4 bg-[#0f2318]">
         <div className="max-w-md w-full rounded-2xl p-8 text-center bg-[#1a3d2e] border border-[#2d5a40]">
           <div className="text-5xl mb-4">😕</div>
           <h1 className="text-xl font-bold text-white mb-2">Invite Not Found</h1>
@@ -180,7 +180,7 @@ export default function TeamInvitePage() {
 
   if (result === 'accepted') {
     return (
-      <main className="min-h-screen flex items-center justify-center px-4 bg-[#0f2318]">
+      <main className="min-h-dvh flex items-center justify-center px-4 bg-[#0f2318]">
         <div className="max-w-md w-full rounded-2xl p-8 text-center bg-[#1a3d2e] border border-[#2d5a40]">
           <div className="text-6xl mb-4">🎉</div>
           <h1 className="text-2xl font-bold text-white mb-2">You Accepted the Invite!</h1>
@@ -197,7 +197,7 @@ export default function TeamInvitePage() {
 
   if (result === 'rejected') {
     return (
-      <main className="min-h-screen flex items-center justify-center px-4 bg-[#0f2318]">
+      <main className="min-h-dvh flex items-center justify-center px-4 bg-[#0f2318]">
         <div className="max-w-md w-full rounded-2xl p-8 text-center bg-[#1a3d2e] border border-[#2d5a40]">
           <div className="text-6xl mb-4">👋</div>
           <h1 className="text-2xl font-bold text-white mb-2">Invite Declined</h1>
@@ -220,7 +220,7 @@ export default function TeamInvitePage() {
     }[registration.status]
 
     return (
-      <main className="min-h-screen flex items-center justify-center px-4 bg-[#0f2318]">
+      <main className="min-h-dvh flex items-center justify-center px-4 bg-[#0f2318]">
         <div className="max-w-md w-full rounded-2xl p-8 text-center bg-[#1a3d2e] border border-[#2d5a40]">
           <div className="text-6xl mb-4">{info.emoji}</div>
           <h1 className="text-2xl font-bold text-white mb-2">{info.title}</h1>
@@ -239,7 +239,7 @@ export default function TeamInvitePage() {
   const event = registration.event
 
   return (
-    <main className="min-h-screen py-10 px-4 bg-[#0f2318]">
+    <main className="min-h-dvh py-10 px-4 bg-[#0f2318]">
       <div className="max-w-md mx-auto">
         <div className="rounded-2xl overflow-hidden bg-[#1a3d2e] border border-[#2d5a40]">
           <div className="px-6 py-5 text-center bg-[#0f2318]" style={{ borderBottom: '3px solid #ff6b35' }}>

@@ -121,7 +121,7 @@ export default function EventAdmin({
   }
 
   return (
-    <main className="min-h-screen px-4 py-5 sm:p-10" style={{ backgroundColor: C.bg }}>
+    <main className="min-h-dvh px-4 py-5 sm:p-10" style={{ backgroundColor: C.bg }}>
       {toastView}
       {dialog}
       <div className="max-w-3xl mx-auto">
