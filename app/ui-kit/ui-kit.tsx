@@ -155,7 +155,7 @@ export function UiKit() {
             </Dialog>
             <Button variant="subtle" onClick={() => toast.success('Link copied', { description: 'Share it with your partner.' })}>Toast</Button>
             <ShareEventButton title="Sample event" url="/tournaments" />
-            <AddToCalendarButton event={{ id: 'ui-kit-sample', name: 'Sample event', date: '2026-10-10', time: '18:30', location: 'Sample venue, Turin', url: '/tournaments' }} />
+            <AddToCalendarButton event={{ id: 'ui-kit-sample', name: 'Sample event', format: 'Americano', date: '2026-10-10', time: '18:30', location: 'Sample venue, Turin', url: '/tournaments' }} />
           </div>
           <Card className="flex items-center justify-between p-4">
             <span className="font-display text-score font-bold"><FlipNumber value={score} /> : 10</span>

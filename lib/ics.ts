@@ -1,4 +1,4 @@
-import { CALENDAR_DEFAULT_DURATION_MIN, EVENT_TIMEZONE } from '@/lib/config'
+import { calendarDurationMin, EVENT_TIMEZONE } from '@/lib/config'
 
 export type CalendarEvent = {
   id: string
@@ -9,6 +9,8 @@ export type CalendarEvent = {
   time: string | null
   location: string | null
   description?: string | null
+  /** events.format; sets the calendar entry length (see lib/config.ts) */
+  format?: string | null
   url: string
 }
 
@@ -61,7 +63,7 @@ export function buildIcs(ev: CalendarEvent): string {
     lines.push(...VTIMEZONE)
     // Floating wall-clock arithmetic in local time; the TZID gives it meaning.
     const start = new Date(Date.UTC(y, m - 1, d, Number(time[1]), Number(time[2])))
-    const end = new Date(start.getTime() + CALENDAR_DEFAULT_DURATION_MIN * 60_000)
+    const end = new Date(start.getTime() + calendarDurationMin(ev.format) * 60_000)
     const local = (t: Date) => stamp(t).slice(0, -1) // drop "Z"
     when = [`DTSTART;TZID=${EVENT_TIMEZONE}:${local(start)}`, `DTEND;TZID=${EVENT_TIMEZONE}:${local(end)}`]
   } else {
