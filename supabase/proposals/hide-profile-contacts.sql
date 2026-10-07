@@ -4,7 +4,7 @@
 --   STEP 1  (additive, safe anytime)    -> helper functions
 --   deploy  main + ui-redesign code that no longer selects email/phone with the anon key
 --   STEP 2  (the actual lock-down)      -> column-level grants on profiles
---   STEP 3  (optional, legacy table)    -> tournament_registrations.email
+--   STEP 3  (legacy table)              -> tournament_registrations.email
 --
 -- Service-role code (supabaseAdmin, API routes, scripts) is unaffected: service_role
 -- keeps full table privileges.
@@ -88,18 +88,17 @@ commit;
 notify pgrst, 'reload schema';
 
 ------------------------------------------------------------------------------
--- STEP 3 — OPTIONAL: legacy tournament_registrations (11 rows with emails)
+-- STEP 3 — legacy tournament_registrations (11 rows with emails)
 ------------------------------------------------------------------------------
--- Requires first: app/api/register/route.ts uses the service role (it filters by
--- email), app/register/page.tsx selects explicit columns instead of '*', and the
--- leaderboard uses legacy_leaderboard_entries(). Not needed for the profiles fix.
---
--- begin;
--- revoke select on table public.tournament_registrations from anon, authenticated;
--- grant select (
---   id, first_name, last_name, tournament_date, tournament_location, created_at,
---   email_verified, admin_approved, checked_in, checked_in_at, skill_score,
---   skill_level, quiz_completed_at, last_score_change
--- ) on table public.tournament_registrations to anon, authenticated;
--- commit;
--- notify pgrst, 'reload schema';
+-- Requires the deployed code: app/api/register/route.ts on the service role (it filters by
+-- email), app/register/page.tsx selecting ids only, and the leaderboard using
+-- legacy_leaderboard_entries().
+begin;
+revoke select on table public.tournament_registrations from anon, authenticated;
+grant select (
+  id, first_name, last_name, tournament_date, tournament_location, created_at,
+  email_verified, admin_approved, checked_in, checked_in_at, skill_score,
+  skill_level, quiz_completed_at, last_score_change
+) on table public.tournament_registrations to anon, authenticated;
+commit;
+notify pgrst, 'reload schema';
