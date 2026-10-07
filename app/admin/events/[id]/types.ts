@@ -40,11 +40,7 @@ export type AdminProfile = {
   avatar_url: string | null
 }
 
-export const TEAM_FORMATS = ['Team', 'Team Americano']
-
-export function isTeamFormat(format: string | null | undefined) {
-  return !!format && TEAM_FORMATS.includes(format)
-}
+export { TEAM_FORMATS, isTeamFormat } from '@/lib/event-format'
 
 export function fullName(p: Pick<AdminProfile, 'first_name' | 'last_name' | 'email'> | null | undefined) {
   if (!p) return 'Unknown player'

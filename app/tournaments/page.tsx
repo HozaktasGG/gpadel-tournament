@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-server'
+import { isTeamFormat } from '@/lib/event-format'
 
 type EventRow = {
   id: string
@@ -53,8 +54,8 @@ export default async function TournamentsPage({
 
   const events = (data ?? []) as EventRow[]
 
-  const teamEventIds = events.filter(e => e.format === 'Team').map(e => e.id)
-  const americanoEventIds = events.filter(e => e.format !== 'Team').map(e => e.id)
+  const teamEventIds = events.filter(e => isTeamFormat(e.format)).map(e => e.id)
+  const americanoEventIds = events.filter(e => !isTeamFormat(e.format)).map(e => e.id)
 
   const [teamRowsRes, regRowsRes] = await Promise.all([
     teamEventIds.length
@@ -84,7 +85,7 @@ export default async function TournamentsPage({
 
   const countByEvent: Record<string, number> = {}
   for (const ev of events) {
-    countByEvent[ev.id] = ev.format === 'Team'
+    countByEvent[ev.id] = isTeamFormat(ev.format)
       ? (teamCountMap.get(ev.id) ?? 0) * 2
       : (regCountMap.get(ev.id) ?? 0)
   }

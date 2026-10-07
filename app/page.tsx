@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-server'
+import { isTeamFormat } from '@/lib/event-format'
 import { getLevel, getLevelColor } from '@/lib/quiz-questions'
 
 type EventRow = {
@@ -73,12 +74,13 @@ export default async function HomePage() {
 
   const eventCounts = await Promise.all(
     upcomingEvents.map(async ev => {
+      const team = isTeamFormat(ev.format)
       const { count } = await supabase
-        .from('event_registrations')
+        .from(team ? 'team_registrations' : 'event_registrations')
         .select('*', { count: 'exact', head: true })
         .eq('event_id', ev.id)
         .eq('status', 'approved')
-      return { id: ev.id, count: count ?? 0 }
+      return { id: ev.id, count: (count ?? 0) * (team ? 2 : 1) }
     })
   )
   const countByEvent = Object.fromEntries(eventCounts.map(c => [c.id, c.count]))
