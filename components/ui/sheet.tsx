@@ -95,7 +95,7 @@ export function BottomSheet({
                 </div>
                 <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-3 pt-2 md:pt-5">
                   <div className="min-w-0">
-                    <DialogPrimitive.Title className="font-display text-2xl font-semibold leading-tight">{title}</DialogPrimitive.Title>
+                    <DialogPrimitive.Title className="font-display text-[22px] font-semibold leading-tight">{title}</DialogPrimitive.Title>
                     {description && (
                       <DialogPrimitive.Description className="mt-1 text-sm text-muted-foreground">{description}</DialogPrimitive.Description>
                     )}

@@ -158,7 +158,7 @@ export function Section({ title, count, action, children }: { title: string; cou
   return (
     <Card className="mb-4 p-4 md:p-5">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="font-display text-2xl font-semibold">
+        <h2 className="font-display text-[22px] font-semibold">
           {title}
           {count !== undefined && <span className="ml-2 font-sans text-sm font-normal text-muted-foreground">({count})</span>}
         </h2>

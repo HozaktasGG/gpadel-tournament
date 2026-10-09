@@ -46,9 +46,9 @@ export function RatingChart({ rows }: { rows: ScoreRow[] }) {
 
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <h2 className="font-display text-2xl font-semibold">Rating progress</h2>
-        <div role="group" aria-label="Time range" className="inline-flex rounded-full border border-border bg-pitch-950/60 p-1">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-2 gap-y-2">
+        <h2 className="font-display text-xl font-semibold">Rating progress</h2>
+        <div role="group" aria-label="Time range" className="inline-flex rounded-full border border-border bg-pitch-950/60 p-0.5">
           {RANGES.map(r => (
             <button
               key={r.value}
@@ -56,7 +56,7 @@ export function RatingChart({ rows }: { rows: ScoreRow[] }) {
               aria-pressed={range === r.value}
               onClick={() => setRange(r.value)}
               className={cn(
-                'h-11 whitespace-nowrap rounded-full px-3 text-[13px] font-medium transition-colors',
+                'h-11 whitespace-nowrap rounded-full px-2.5 text-[13px] font-medium transition-colors',
                 range === r.value ? 'bg-foreground text-pitch-950' : 'text-muted-foreground hover:text-foreground'
               )}
             >
@@ -67,11 +67,11 @@ export function RatingChart({ rows }: { rows: ScoreRow[] }) {
       </div>
 
       {data.length === 0 ? (
-        <p className="flex h-48 items-center justify-center rounded-xl border border-dashed border-border-strong text-sm text-muted-foreground">
+        <p className="flex h-44 items-center justify-center rounded-xl border border-dashed border-border-strong text-sm text-muted-foreground">
           No rating changes in this period.
         </p>
       ) : (
-        <div className="h-56 w-full" role="img" aria-label={`Rating from ${data[0].score} to ${data[lastIndex].score}`}>
+        <div className="h-44 w-full md:h-56" role="img" aria-label={`Rating from ${data[0].score} to ${data[lastIndex].score}`}>
           <ResponsiveContainer>
             <AreaChart data={data} margin={{ top: 22, right: 18, bottom: 0, left: -8 }}>
               <defs>

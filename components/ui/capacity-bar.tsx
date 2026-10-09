@@ -1,6 +1,7 @@
 'use client'
 
 import { motion } from 'motion/react'
+import { Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { EASE_OUT } from '@/components/motion'
 
@@ -52,9 +53,11 @@ export function CapacityBar({
     return (
       <div className={cn('space-y-2.5', className)}>
         <div className="flex items-baseline justify-between gap-3">
-          <p className="font-display text-xl font-semibold tabular">
-            {filled} <span className="text-muted-foreground">/ {cap ?? '—'}</span>{' '}
-            <span className="text-base font-medium">{unit}</span>
+          <p className="flex items-center font-display text-xl font-semibold tabular">
+            <Users className="mr-2 size-5 text-muted-foreground" aria-hidden />
+            <span>
+              {filled} <span className="text-muted-foreground">/ {cap ?? '—'}</span> <span className="text-base font-medium">{unit}</span>
+            </span>
           </p>
           {cap !== null && <p className={cn('text-sm', full ? 'text-primary-text' : 'text-muted-foreground')}>{leftLabel}</p>}
         </div>

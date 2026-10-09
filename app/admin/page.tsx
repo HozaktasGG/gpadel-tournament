@@ -519,7 +519,7 @@ export default function AdminPage() {
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-overline font-semibold uppercase text-muted-foreground">Organizer workspace</p>
-            <h1 className="mt-1 font-display text-[40px] font-bold leading-none text-white md:text-hero">Overview</h1>
+            <h1 className="mt-1 font-display text-[36px] font-bold leading-none text-white md:text-hero">Overview</h1>
           </div>
           {/* Quick links */}
           <div className="flex flex-wrap gap-2">

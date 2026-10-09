@@ -210,7 +210,7 @@ export default function TeamInvitePage() {
         <span className="size-2.5 rounded-full bg-primary" aria-hidden />
         Partner invite
       </p>
-      <h1 className="mt-1 font-display text-[40px] font-bold leading-none">You have an invite!</h1>
+      <h1 className="mt-1 font-display text-[36px] font-bold leading-none">You have an invite!</h1>
 
       <Card className="mt-5 p-5">
         <div className="flex items-center gap-4">

@@ -242,7 +242,7 @@ export default function ProfilePage() {
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 pb-10 pt-5 md:pt-10">
       {/* Identity */}
-      <section className="flex items-center gap-4 md:gap-6">
+      <section className="flex items-start gap-4 md:gap-6">
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
@@ -272,23 +272,23 @@ export default function ProfilePage() {
           <div className="mt-1.5">
             <SkillBadge level={level} variant="solid" size="md" />
           </div>
+          <div className="mt-2 flex flex-wrap items-end gap-x-3">
+            <p className="font-display text-[48px] font-bold leading-none tabular md:text-rating">{quizCompleted && score != null ? score : '—'}</p>
+            {seasonDelta !== 0 && (
+              <p className={cn('mb-1 font-display text-lg font-semibold', seasonDelta > 0 ? 'text-lime' : 'text-destructive')}>
+                {seasonDelta > 0 ? `+${seasonDelta}` : seasonDelta} <span className="text-sm font-medium text-muted-foreground">this season</span>
+              </p>
+            )}
+          </div>
         </div>
       </section>
       {avatarMsg && <p className="mt-2 text-sm text-muted-foreground" role="status">{avatarMsg}</p>}
 
-      <div className="mt-4 flex items-end gap-3">
-        <p className="font-display text-rating font-bold tabular">{quizCompleted && score != null ? score : '—'}</p>
-        {seasonDelta !== 0 && (
-          <p className={cn('mb-1.5 font-display text-xl font-semibold', seasonDelta > 0 ? 'text-success' : 'text-destructive')}>
-            {seasonDelta > 0 ? `+${seasonDelta}` : seasonDelta} <span className="text-base font-medium text-muted-foreground">this season</span>
-          </p>
-        )}
-      </div>
 
       <Stagger className="mt-6 space-y-4">
         {/* Rating chart + stats */}
         <FadeUpItem>
-          <Card className="p-4 md:p-5">
+          <Card className="p-3.5 md:p-5">
             {history === null ? <Skeleton className="h-64 w-full" /> : <RatingChart rows={history} />}
             <dl className={cn('mt-4 grid divide-x divide-border rounded-xl border border-border', teamStats ? 'grid-cols-3' : 'grid-cols-1')}>
               <Stat label="Tournaments" value={results ? String(results.length) : '—'} />
@@ -303,7 +303,7 @@ export default function ProfilePage() {
         {/* Recent results */}
         <FadeUpItem>
           <Card className="p-4 md:p-5">
-            <h2 className="mb-3 font-display text-2xl font-semibold">Recent results</h2>
+            <h2 className="mb-3 font-display text-[22px] font-semibold">Recent results</h2>
             {results === null ? (
               <Skeleton className="h-20 w-full" />
             ) : results.length === 0 ? (
@@ -344,7 +344,7 @@ export default function ProfilePage() {
         {/* Skill levels + quiz */}
         <FadeUpItem>
           <Card className="p-4 md:p-5">
-            <h2 className="mb-3 font-display text-2xl font-semibold">Player skill levels</h2>
+            <h2 className="mb-3 font-display text-[22px] font-semibold">Player skill levels</h2>
             <div className="flex flex-wrap gap-2">
               {['Unranked', 'Beginner', 'Intermediate', 'Advanced'].map(l => (
                 <SkillBadge key={l} level={l} variant="solid" size="md" dot className={cn(l !== level && 'opacity-55')} />
@@ -369,7 +369,7 @@ export default function ProfilePage() {
         {/* Account */}
         <FadeUpItem>
           <Card className="p-4 md:p-5">
-            <h2 className="mb-4 font-display text-2xl font-semibold">Account</h2>
+            <h2 className="mb-4 font-display text-[22px] font-semibold">Account</h2>
             <form onSubmit={saveProfile} className="space-y-3">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <Field label="First name" htmlFor="first-name">

@@ -160,7 +160,7 @@ export default function TournamentPage() {
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-8 pt-5 md:pt-10">
       {/* Header */}
       <header>
-        <h1 className="font-display text-[40px] font-bold leading-none md:text-hero">Live scores</h1>
+        <h1 className="font-display text-[36px] font-bold leading-none md:text-hero">Live scores</h1>
         <p className="mt-1 font-display text-xl text-muted-foreground">{modeLabel}</p>
         <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2">
           {isLive && <LivePill />}
@@ -238,8 +238,15 @@ export default function TournamentPage() {
               const base = (m.court_number - 1) * 2 + 1
               return (
                 <FadeUpItem key={m.id}>
-                  <article className={cn('overflow-hidden rounded-2xl border bg-card shadow-card', playing ? 'border-primary/30' : 'border-border')}>
-                    <header className="flex items-center justify-between px-4 pt-3">
+                  <article className={cn('relative overflow-hidden rounded-2xl border bg-card shadow-card', playing ? 'border-primary/30' : 'border-border')}>
+                    <svg aria-hidden viewBox="0 0 200 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-x-[22%] inset-y-3 h-[calc(100%-1.5rem)] w-[56%] text-white/[0.07]">
+                      <rect x="1" y="1" width="198" height="98" fill="none" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                      <line x1="100" y1="1" x2="100" y2="99" stroke="currentColor" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+                      <line x1="40" y1="1" x2="40" y2="99" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+                      <line x1="160" y1="1" x2="160" y2="99" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+                      <line x1="40" y1="50" x2="160" y2="50" stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+                    </svg>
+                    <header className="relative flex items-center justify-between px-4 pt-3">
                       <h3 className="font-display text-xl font-semibold">
                         Court {m.court_number}
                         {isFinalRound && (
@@ -257,7 +264,7 @@ export default function TournamentPage() {
                         <span className="text-xs font-semibold uppercase tracking-[0.08em] text-subtle">Final</span>
                       ) : null}
                     </header>
-                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 pb-4 pt-2">
+                    <div className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-3 pb-4 pt-2">
                       <Pair names={m.team1} won={t1Won} lost={t2Won} />
                       <p className="flex items-center gap-2 font-display text-score font-bold" aria-label={`Score ${m.team1_score ?? 0} to ${m.team2_score ?? 0}`}>
                         <FlipNumber value={m.team1_score ?? '–'} className={cn(t2Won && 'text-muted-foreground')} />
@@ -277,7 +284,7 @@ export default function TournamentPage() {
       {/* Standings */}
       <section aria-labelledby="standings-h" className="mt-8">
         <div className="mb-3 flex items-baseline justify-between">
-          <h2 id="standings-h" className="font-display text-2xl font-semibold">
+          <h2 id="standings-h" className="font-display text-[22px] font-semibold">
             {isFinished ? 'Final standings' : 'Individual standings'}
           </h2>
           <p className="text-xs uppercase tracking-wider text-subtle">+/- · MP</p>

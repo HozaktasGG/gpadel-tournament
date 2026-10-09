@@ -9,7 +9,7 @@ export function QuizResult({ eyebrow, title, subtitle, score, level }: { eyebrow
   return (
     <main className="mx-auto w-full max-w-md flex-1 px-4 pb-10 pt-6 md:pt-10">
       <p className="text-overline font-semibold uppercase text-primary-text">{eyebrow}</p>
-      <h1 className="mt-1 font-display text-[40px] font-bold leading-none">{title}</h1>
+      <h1 className="mt-1 font-display text-[36px] font-bold leading-none">{title}</h1>
       {subtitle && <p className="mt-2 text-[17px] text-foreground/80">{subtitle}</p>}
       <Card className="mt-6 p-6 text-center">
         <p className="text-overline font-semibold uppercase text-subtle">Your rating</p>

@@ -556,7 +556,7 @@ function FixturesCard({ event, hasFixtures }: { event: AdminEvent; hasFixtures: 
           <Network className="size-5" aria-hidden />
         </span>
         <div className="min-w-0">
-          <h2 className="font-display text-2xl font-semibold leading-tight">Fixtures</h2>
+          <h2 className="font-display text-[22px] font-semibold leading-tight">Fixtures</h2>
           <p className="text-sm text-muted-foreground">
             {event.format === 'Team' ? 'Group stage + knockout' : event.format === 'Team Americano' ? 'Round robin + placement finals' : 'Americano rounds + court finals'}
           </p>

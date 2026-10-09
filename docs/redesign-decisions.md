@@ -57,3 +57,9 @@ One line per non-trivial decision. Mockups: `design/01–04`.
 - Remaining Turkish admin strings translated to English (UI text only).
 - Fixtures manager accepts `?event=<id>` to open an event directly (used by Manage event → Fixtures; read-only URL param).
 - Selects use `appearance: none` + token surface + chevron (WebKit's native grey select clashed with the theme).
+
+## Fidelity pass
+- Side-by-side checks against the mockup phone screens at matched width; global density pass (page titles 36–38px, section titles 22px) to match the mockups' tighter type.
+- Tap targets stay ≥44px even where the mockup draws smaller pills (tabs, round chips, chart range toggle); the chart range toggle wraps under its title on 390pt screens.
+- Live score cards get the mockup's faint court diagram; profile rating moved beside the avatar; detail page shows a 2-line description under the info card on phones.
+- Page transitions: short fade-up per navigation via `app/template.tsx` (disabled under Reduce Motion).

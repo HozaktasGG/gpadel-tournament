@@ -58,7 +58,7 @@ export default function QuizForm({ userId, firstName }: Props) {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-10 pt-6 md:pt-10">
       <p className="text-overline font-semibold uppercase text-muted-foreground">Skill assessment</p>
-      <h1 className="mt-1 font-display text-[40px] font-bold leading-none md:text-hero">Padel skill quiz</h1>
+      <h1 className="mt-1 font-display text-[36px] font-bold leading-none md:text-hero">Padel skill quiz</h1>
       <p className="mt-2 text-[17px] text-foreground/80">
         Hi {firstName}, answer {total} questions to get your rating out of 1000.
       </p>
@@ -82,7 +82,7 @@ export default function QuizForm({ userId, firstName }: Props) {
           return (
             <section key={section.id} aria-labelledby={`sec-${section.id}`}>
               <div className="mb-3 flex items-baseline justify-between">
-                <h2 id={`sec-${section.id}`} className="font-display text-2xl font-semibold">
+                <h2 id={`sec-${section.id}`} className="font-display text-[22px] font-semibold">
                   {section.title}
                 </h2>
                 <p className="text-xs text-subtle">max {section.max} pts</p>

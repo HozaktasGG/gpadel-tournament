@@ -106,7 +106,7 @@ export default function LeaderboardPage() {
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 px-4 pb-10 pt-6 md:pt-10">
       <p className="text-overline font-semibold uppercase text-muted-foreground">Turin padel community</p>
-      <h1 className="mt-1 font-display text-[40px] font-bold leading-none md:text-hero">Leaderboard</h1>
+      <h1 className="mt-1 font-display text-[36px] font-bold leading-none md:text-hero">Leaderboard</h1>
       <p className="mt-2 text-[17px] text-foreground/80">Skill ratings — top players first.</p>
       {myRank > 0 && (
         <p className="mt-3 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-sm text-primary-text">

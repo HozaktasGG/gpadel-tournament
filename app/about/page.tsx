@@ -19,7 +19,7 @@ export default function AboutPage() {
         <div className="absolute inset-0 bg-gradient-to-b from-background/70 via-background/85 to-background" />
         <div className="relative mx-auto max-w-3xl px-4 pb-6 pt-10 md:px-8 md:pt-16">
           <p className="text-overline font-semibold uppercase text-foreground/80">Turin padel community</p>
-          <h1 className="mt-1 font-display text-[44px] font-bold leading-none md:text-hero-lg">About SmashTorino</h1>
+          <h1 className="mt-1 font-display text-[38px] font-bold leading-none md:text-hero-lg">About SmashTorino</h1>
           <p className="mt-2 text-[17px] text-foreground/85">Built by padel players, for padel players.</p>
         </div>
       </section>

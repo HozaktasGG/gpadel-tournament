@@ -9,7 +9,7 @@ export function HomeHero() {
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/85 to-background/55 md:bg-gradient-to-r md:from-background md:via-background/80 md:to-background/10" />
         <div className="relative px-4 pb-6 pt-8 md:px-10 md:py-14">
           <p className="text-overline font-semibold uppercase text-foreground/85">Turin padel community</p>
-          <h1 className="mt-2 max-w-xl text-balance font-display text-[44px] font-bold leading-[0.92] tracking-tight md:text-[64px]">
+          <h1 className="mt-2 max-w-xl text-balance font-display text-[38px] font-bold leading-[0.92] tracking-tight md:text-[64px]">
             Your next match starts here.
           </h1>
           <p className="mt-3 text-[17px] text-foreground/85 md:text-xl">Find your court. Meet your community.</p>

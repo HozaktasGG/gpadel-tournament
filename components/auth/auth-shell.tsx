@@ -19,7 +19,7 @@ export function AuthShell({
       <div className="absolute inset-0 bg-gradient-to-b from-background/80 via-background/90 to-background" />
       <div className="relative w-full max-w-md">
         <p className="text-overline font-semibold uppercase text-foreground/80">Turin padel community</p>
-        <h1 className="mt-1 font-display text-[40px] font-bold leading-none md:text-hero">{title}</h1>
+        <h1 className="mt-1 font-display text-[36px] font-bold leading-none md:text-hero">{title}</h1>
         {subtitle && <p className="mt-2 text-[17px] text-foreground/80">{subtitle}</p>}
         <div className="mt-6 rounded-2xl border border-border bg-card/95 p-5 shadow-elevated backdrop-blur-sm md:p-6">{children}</div>
         {footer && <div className="mt-5 text-center text-[15px] text-muted-foreground">{footer}</div>}

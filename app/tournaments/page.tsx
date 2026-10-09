@@ -20,7 +20,7 @@ export default async function TournamentsPage({
     <main className="flex-1 pb-10">
       <div className="mx-auto max-w-[1200px] px-4 pt-6 md:px-8 md:pt-10">
         <p className="text-overline font-semibold uppercase text-muted-foreground">Turin padel community</p>
-        <h1 className="mb-5 mt-1 font-display text-[40px] font-bold leading-none md:text-hero-lg">Tournaments</h1>
+        <h1 className="mb-5 mt-1 font-display text-[36px] font-bold leading-none md:text-hero-lg">Tournaments</h1>
         <DiscoverBrowser events={events} liveTournament={liveTournament} initialTab={initialTab} />
       </div>
     </main>

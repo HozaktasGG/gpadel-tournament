@@ -42,7 +42,7 @@ function registrationPill(ev: PlayerEvent) {
 function SectionHeader({ title, href, linkLabel = 'View all' }: { title: string; href?: string; linkLabel?: string }) {
   return (
     <div className="mb-3 flex items-center justify-between">
-      <h2 className="font-display text-2xl font-semibold">{title}</h2>
+      <h2 className="font-display text-[22px] font-semibold">{title}</h2>
       {href && (
         <Link href={href} className="inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           {linkLabel}
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
 
       <div className="relative mx-auto max-w-[1100px] px-4 pb-10 pt-6 md:px-8 md:pt-10">
         <header>
-          <h1 className="font-display text-[44px] font-bold leading-none md:text-hero-lg">Hey, {firstName}</h1>
+          <h1 className="font-display text-[38px] font-bold leading-none md:text-hero-lg">Hey, {firstName}</h1>
           <p className="mt-1 text-[17px] text-foreground/80">Ready for your next match?</p>
         </header>
 
@@ -208,11 +208,11 @@ export default async function DashboardPage() {
             <FadeUpItem>
               <Link href="/profile" className="block rounded-2xl border border-border bg-card p-4 shadow-card transition-colors hover:border-border-strong active:bg-pitch-800 md:p-5">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-display text-2xl font-semibold">Your rating</h2>
+                  <h2 className="font-display text-[22px] font-semibold">Your rating</h2>
                   <ChevronRight className="size-5 text-subtle" aria-hidden />
                 </div>
                 <div className="mt-2 flex flex-wrap items-center gap-3">
-                  <p className="font-display text-[44px] font-bold leading-none tabular">{quizDone ? score : '—'}</p>
+                  <p className="font-display text-[38px] font-bold leading-none tabular">{quizDone ? score : '—'}</p>
                   <SkillBadge level={level} variant="solid" size="md" dot />
                 </div>
                 {(rank !== null || change !== 0) && (

@@ -26,7 +26,7 @@ export default async function HomePage() {
             {(liveEvents.length > 0 || liveTournament) && (
               <Card className="p-4 md:p-5">
                 <div className="mb-3 flex items-center justify-between">
-                  <h2 className="flex items-center gap-2.5 font-display text-2xl font-semibold">
+                  <h2 className="flex items-center gap-2.5 font-display text-[22px] font-semibold">
                     <span className="size-2.5 rounded-full bg-live motion-safe:animate-pulse" aria-hidden />
                     Live now
                   </h2>
@@ -57,7 +57,7 @@ export default async function HomePage() {
             {lastCompleted && (
               <Card className="p-4 md:p-5">
                 <div className="mb-3 flex items-center justify-between">
-                  <h2 className="font-display text-2xl font-semibold">Completed</h2>
+                  <h2 className="font-display text-[22px] font-semibold">Completed</h2>
                   <Link href="/tournaments?tab=completed" className="inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary-text hover:underline">
                     View all results <ChevronRight className="size-4" aria-hidden />
                   </Link>

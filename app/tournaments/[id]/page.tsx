@@ -454,13 +454,13 @@ export default async function TournamentDetailPage({
       {ev.time && <InfoRow icon={Clock}>{ev.time}</InfoRow>}
       <li className="grid grid-cols-2 divide-x divide-border">
         {ev.location && (
-          <span className="flex min-h-12 items-center gap-3 py-2.5 pr-3">
+          <span className="flex min-h-11 items-center gap-3 py-2 pr-3">
             <MapPin className="size-5 shrink-0 text-muted-foreground" aria-hidden />
             <span className="min-w-0 truncate">{ev.location}</span>
           </span>
         )}
         {priceLabel && (
-          <span className="flex min-h-12 items-center gap-3 py-2.5 pl-4">
+          <span className="flex min-h-11 items-center gap-3 py-2 pl-4">
             <Euro className="size-5 shrink-0 text-muted-foreground" aria-hidden />
             <span>{priceLabel === 'Free' ? 'Free entry' : `${priceLabel} per person`}</span>
           </span>
@@ -483,7 +483,7 @@ export default async function TournamentDetailPage({
 
   const aboutSection = (ev.description || ev.pdf_url) && (
     <Card className="p-5">
-      <h2 className="font-display text-2xl font-semibold">About this tournament</h2>
+      <h2 className="font-display text-[22px] font-semibold">About this tournament</h2>
       {ev.description && <p className="mt-2 whitespace-pre-line text-[15px] leading-relaxed text-muted-foreground">{ev.description}</p>}
       <div className="mt-4 flex flex-wrap gap-2">
         <Badge variant="muted" size="md">
@@ -525,7 +525,7 @@ export default async function TournamentDetailPage({
   ) : sorted && sorted.length > 0 ? (
     <section aria-labelledby="players-h">
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 id="players-h" className="font-display text-2xl font-semibold">Players</h2>
+        <h2 id="players-h" className="font-display text-[22px] font-semibold">Players</h2>
         <p className="text-sm text-muted-foreground">{sorted.length} registered</p>
       </div>
       <p className="mb-3 text-sm text-muted-foreground">Top rated players</p>
@@ -550,7 +550,7 @@ export default async function TournamentDetailPage({
     <div className="space-y-6">
       {tournamentResults.standings.length > 0 && (
         <section>
-          <h2 className="mb-3 font-display text-2xl font-semibold">Final standings</h2>
+          <h2 className="mb-3 font-display text-[22px] font-semibold">Final standings</h2>
           <ol className="space-y-2">
             {tournamentResults.standings.map(s => (
               <li key={s.rank} className="flex min-h-[56px] items-center gap-3 rounded-xl border border-border bg-pitch-850 px-3">
@@ -646,7 +646,7 @@ export default async function TournamentDetailPage({
   ) : approvedTeams.length > 0 ? (
     <section>
       <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="font-display text-2xl font-semibold">Teams</h2>
+        <h2 className="font-display text-[22px] font-semibold">Teams</h2>
         <p className="text-sm text-muted-foreground">{approvedTeams.length} confirmed</p>
       </div>
       <Stagger className="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -674,27 +674,27 @@ export default async function TournamentDetailPage({
       {myRegistrationCard}
       {yourTeam && (
         <section>
-          <h2 className="mb-3 font-display text-2xl font-semibold">Your team</h2>
+          <h2 className="mb-3 font-display text-[22px] font-semibold">Your team</h2>
           {yourTeam}
         </section>
       )}
       {isTeamAmericano
         ? taPlacements.length > 0 && (
             <section>
-              <h2 className="mb-3 font-display text-2xl font-semibold">Final standings</h2>
+              <h2 className="mb-3 font-display text-[22px] font-semibold">Final standings</h2>
               <PlacementList placements={taPlacements.slice(0, 4)} team={team} />
             </section>
           )
         : user &&
           groupTables && (
             <section>
-              <h2 className="mb-3 font-display text-2xl font-semibold">Group stage</h2>
+              <h2 className="mb-3 font-display text-[22px] font-semibold">Group stage</h2>
               {groupTables}
             </section>
           )}
       {!isTeamAmericano && user && knockout.length > 0 && (
         <section>
-          <h2 className="mb-3 font-display text-2xl font-semibold">Knockout bracket</h2>
+          <h2 className="mb-3 font-display text-[22px] font-semibold">Knockout bracket</h2>
           <KnockoutBracket rounds={knockout} team={team} />
         </section>
       )}
@@ -761,7 +761,7 @@ export default async function TournamentDetailPage({
     <div className="space-y-6">
       {taPlacements.length > 0 && (
         <section>
-          <h2 className="mb-3 font-display text-2xl font-semibold">Final standings</h2>
+          <h2 className="mb-3 font-display text-[22px] font-semibold">Final standings</h2>
           <PlacementList placements={taPlacements} team={team} />
         </section>
       )}
@@ -826,7 +826,7 @@ export default async function TournamentDetailPage({
               {live && <LivePill />}
               {isFinished && !live && <Badge size="sm" className="border-white/20 bg-black/55 text-foreground backdrop-blur-sm">Finished</Badge>}
             </div>
-            <h1 className="max-w-3xl text-balance font-display text-[40px] font-bold leading-[0.95] tracking-tight md:text-hero-lg">{ev.name}</h1>
+            <h1 className="max-w-3xl text-balance font-display text-[36px] font-bold leading-[0.95] tracking-tight md:text-hero-lg">{ev.name}</h1>
             <p className="mt-1.5 font-display text-xl font-medium text-success md:text-2xl">{subtitle}</p>
           </div>
         </div>
@@ -837,6 +837,7 @@ export default async function TournamentDetailPage({
           {/* Main column */}
           <div className="min-w-0 space-y-5">
             <Card className="px-4 text-[15px] md:px-5">{infoRows}</Card>
+            {ev.description && <p className="line-clamp-2 text-[15px] leading-snug text-muted-foreground lg:hidden">{ev.description}</p>}
 
             {live && (
               <Card className="flex items-center justify-between gap-3 border-primary/30 p-4">
@@ -885,7 +886,7 @@ export default async function TournamentDetailPage({
 
 function InfoRow({ icon: Icon, children }: { icon: typeof Clock; children: React.ReactNode }) {
   return (
-    <li className="flex min-h-12 items-center gap-3 py-2.5">
+    <li className="flex min-h-11 items-center gap-3 py-2">
       <Icon className="size-5 shrink-0 text-muted-foreground" aria-hidden />
       <span>{children}</span>
     </li>
