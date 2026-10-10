@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
+import TeamAmericanoLive from '@/components/TeamAmericanoLive'
+import type { LiveState } from '@/lib/team-americano'
 
 type Match = {
   id: string
@@ -51,7 +53,61 @@ function rankBadge(rank: number) {
   return `${rank}.`
 }
 
+// Shows the live Team Americano event when one is running (or ?event=<id>),
+// otherwise the original Court Americano view.
 export default function TournamentPage() {
+  const [ta, setTa] = useState<LiveState | null>(null)
+  const [checked, setChecked] = useState(false)
+
+  useEffect(() => {
+    const eventParam = new URLSearchParams(window.location.search).get('event')
+    const url = '/api/team-americano/live' + (eventParam ? `?event=${encodeURIComponent(eventParam)}` : '')
+    let eventId: string | null = null
+
+    const load = async () => {
+      try {
+        const res = await fetch(url, { cache: 'no-store' })
+        const data = (await res.json()) as LiveState
+        eventId = data.event?.id ?? null
+        setTa(data)
+      } catch {
+        /* silent */
+      } finally {
+        setChecked(true)
+      }
+    }
+    load()
+
+    const supabase = createClient()
+    const channel = supabase
+      .channel('team-americano-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'team_tournament_matches' }, payload => {
+        const row = (payload.new && 'event_id' in payload.new ? payload.new : payload.old) as { event_id?: string }
+        // Refetch for this event's changes, or when no event is shown yet (one may have just started).
+        if (!eventId || !row.event_id || row.event_id === eventId) load()
+      })
+      .subscribe()
+    // Fallback polling — runs even if realtime isn't enabled for the table
+    const timer = window.setInterval(load, 10000)
+
+    return () => {
+      window.clearInterval(timer)
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  if (!checked) {
+    return (
+      <main className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#1a3d2e' }}>
+        <p className="text-sm text-white/70">Loading...</p>
+      </main>
+    )
+  }
+  if (ta?.event) return <TeamAmericanoLive state={ta} />
+  return <CourtAmericanoView />
+}
+
+function CourtAmericanoView() {
   const [state, setState] = useState<State | null>(null)
   const [loading, setLoading] = useState(true)
   const timerRef = useRef<number | null>(null)

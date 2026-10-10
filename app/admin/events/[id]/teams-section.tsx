@@ -6,7 +6,8 @@ import { createTeam, deleteTeam, swapPlayers, updateTeam } from './actions'
 import type { AdminCtx } from './event-admin'
 import ProfilePicker from './profile-picker'
 import type { AdminRegistration, AdminTeam } from './types'
-import { fullName } from './types'
+import { fullName, renameForNewPlayers } from './types'
+import type { TeamSlotPlayer } from './types'
 import { Avatar, C, GhostButton, PrimaryButton, Section, Sheet, inputCls, labelCls } from './ui'
 
 type TeamStatus = AdminTeam['status']
@@ -35,10 +36,15 @@ export default function TeamsSection({ ctx, registrations, teams }: { ctx: Admin
   const [swapOpen, setSwapOpen] = useState(false)
   const [swapA, setSwapA] = useState('')
   const [swapB, setSwapB] = useState('')
+  const [swapNames, setSwapNames] = useState<{ a: string; b: string }>({ a: '', b: '' })
   const [busy, setBusy] = useState<string | null>(null)
 
   const firstName = (id: string | null) => (id ? ctx.profileMap.get(id)?.first_name?.trim() || fullName(ctx.profileMap.get(id)).split(' ')[0] : '')
   const autoName = (c: string | null, p: string | null) => [firstName(c), firstName(p)].filter(Boolean).join(' & ')
+  const slotOf = (id: string | null): TeamSlotPlayer => ({ id, profile: id ? ctx.profileMap.get(id) : null })
+  // New name after a player change: regenerated if it was auto-style, null if custom (keep it).
+  const renamed = (t: AdminTeam, captainId: string | null, partnerId: string | null) =>
+    renameForNewPlayers(t.team_name, [slotOf(t.captain_id), slotOf(t.partner_id)], [slotOf(captainId), slotOf(partnerId)])
 
   const teamOfPlayer = useMemo(() => {
     const m = new Map<string, AdminTeam>()
@@ -57,8 +63,17 @@ export default function TeamsSection({ ctx, registrations, teams }: { ctx: Admin
     setEditor({ teamId: null, captainId, partnerId: null, name: autoName(captainId, null), nameTouched: false, status: 'approved', sendEmail: false })
   }
 
+  // Auto-style names follow player changes; custom names are kept (still editable).
   const openEdit = (t: AdminTeam) =>
-    setEditor({ teamId: t.id, captainId: t.captain_id, partnerId: t.partner_id, name: t.team_name, nameTouched: true, status: t.status, sendEmail: false })
+    setEditor({
+      teamId: t.id,
+      captainId: t.captain_id,
+      partnerId: t.partner_id,
+      name: t.team_name,
+      nameTouched: renamed(t, t.captain_id, t.partner_id) === null,
+      status: t.status,
+      sendEmail: false,
+    })
 
   const pickerDisabled = useMemo(() => {
     const m = new Map<string, string>()
@@ -77,7 +92,10 @@ export default function TeamsSection({ ctx, registrations, teams }: { ctx: Admin
     const id = ids[0]
     if (!editor || !id || !pickSlot) return
     const next = { ...editor, [pickSlot === 'captain' ? 'captainId' : 'partnerId']: id }
-    if (!next.nameTouched) next.name = autoName(next.captainId, next.partnerId)
+    if (!next.nameTouched) {
+      const original = next.teamId ? teams.find(t => t.id === next.teamId) : null
+      next.name = (original && renamed(original, next.captainId, next.partnerId)) || autoName(next.captainId, next.partnerId)
+    }
     setEditor(next)
     setPickSlot(null)
   }
@@ -141,16 +159,33 @@ export default function TeamsSection({ ctx, registrations, teams }: { ctx: Admin
     if (!(await ctx.confirmFixtures())) return
     setSwapA('')
     setSwapB('')
+    setSwapNames({ a: '', b: '' })
     setSwapOpen(true)
   }
   const doSwap = async () => {
     if (!swapA || !swapB) return
     setSaving(true)
-    const ok = await ctx.run(swapPlayers(ctx.eventId, parseSlot(swapA), parseSlot(swapB)), 'Players swapped')
+    const ok = await ctx.run(swapPlayers(ctx.eventId, parseSlot(swapA), parseSlot(swapB), swapNames), 'Players swapped')
     setSaving(false)
     if (ok) setSwapOpen(false)
   }
   const swapATeam = swapA ? parseSlot(swapA).teamId : null
+  const swapTeamA = swapA ? teams.find(t => t.id === parseSlot(swapA).teamId) : undefined
+  const swapTeamB = swapB ? teams.find(t => t.id === parseSlot(swapB).teamId) : undefined
+
+  // Team names after the swap: regenerated if auto-style, otherwise the current custom name.
+  const predictSwapNames = (a: string, b: string) => {
+    const ta = teams.find(t => t.id === parseSlot(a).teamId)
+    const tb = teams.find(t => t.id === parseSlot(b).teamId)
+    if (!ta || !tb) return { a: '', b: '' }
+    const sa = parseSlot(a).slot
+    const sb = parseSlot(b).slot
+    const playerA = sa === 'captain' ? ta.captain_id : ta.partner_id
+    const playerB = sb === 'captain' ? tb.captain_id : tb.partner_id
+    const after = (t: AdminTeam, s: TeamSlot, incoming: string | null) =>
+      renamed(t, s === 'captain' ? incoming : t.captain_id, s === 'partner' ? incoming : t.partner_id) ?? t.team_name
+    return { a: after(ta, sa, playerB), b: after(tb, sb, playerA) }
+  }
 
   const editorPlayer = (slot: TeamSlot) => {
     const id = slot === 'captain' ? editor?.captainId : editor?.partnerId
@@ -327,7 +362,7 @@ export default function TeamsSection({ ctx, registrations, teams }: { ctx: Admin
         onClose={() => setSwapOpen(false)}
         title="Swap players"
         footer={
-          <PrimaryButton className="w-full" onClick={doSwap} disabled={!swapA || !swapB || saving}>
+          <PrimaryButton className="w-full" onClick={doSwap} disabled={!swapA || !swapB || !swapNames.a.trim() || !swapNames.b.trim() || saving}>
             {saving ? 'Swapping…' : 'Swap'}
           </PrimaryButton>
         }
@@ -335,7 +370,7 @@ export default function TeamsSection({ ctx, registrations, teams }: { ctx: Admin
         <div className="px-4 pb-4 space-y-3">
           <label className="block">
             <span className={labelCls}>Player 1</span>
-            <select className={inputCls} style={C.input} value={swapA} onChange={e => { setSwapA(e.target.value); setSwapB('') }}>
+            <select className={inputCls} style={C.input} value={swapA} onChange={e => { setSwapA(e.target.value); setSwapB(''); setSwapNames({ a: '', b: '' }) }}>
               <option value="">Select…</option>
               {slotOptions.map(o => (
                 <option key={o.value} value={o.value}>
@@ -347,7 +382,7 @@ export default function TeamsSection({ ctx, registrations, teams }: { ctx: Admin
           <p className="text-center text-white/50 text-lg">⇅</p>
           <label className="block">
             <span className={labelCls}>Player 2 (other team)</span>
-            <select className={inputCls} style={C.input} value={swapB} onChange={e => setSwapB(e.target.value)} disabled={!swapA}>
+            <select className={inputCls} style={C.input} value={swapB} onChange={e => { setSwapB(e.target.value); setSwapNames(e.target.value ? predictSwapNames(swapA, e.target.value) : { a: '', b: '' }) }} disabled={!swapA}>
               <option value="">Select…</option>
               {slotOptions
                 .filter(o => o.teamId !== swapATeam)
@@ -358,7 +393,19 @@ export default function TeamsSection({ ctx, registrations, teams }: { ctx: Admin
                 ))}
             </select>
           </label>
-          <p className="text-xs text-white/40">Team names are not changed — rename the teams afterwards if needed.</p>
+          {swapTeamA && swapTeamB && (
+            <>
+              <label className="block">
+                <span className={labelCls}>New name for &ldquo;{swapTeamA.team_name}&rdquo;</span>
+                <input className={inputCls} style={C.input} value={swapNames.a} onChange={e => setSwapNames({ ...swapNames, a: e.target.value })} />
+              </label>
+              <label className="block">
+                <span className={labelCls}>New name for &ldquo;{swapTeamB.team_name}&rdquo;</span>
+                <input className={inputCls} style={C.input} value={swapNames.b} onChange={e => setSwapNames({ ...swapNames, b: e.target.value })} />
+              </label>
+            </>
+          )}
+          <p className="text-xs text-white/40">&ldquo;First &amp; First&rdquo; names are updated to the new players; custom names are kept. Edit either name above if needed.</p>
         </div>
       </Sheet>
     </>

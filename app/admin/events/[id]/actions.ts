@@ -425,10 +425,14 @@ export type TeamSlot = 'captain' | 'partner'
 export async function swapPlayers(
   eventId: string,
   a: { teamId: string; slot: TeamSlot },
-  b: { teamId: string; slot: TeamSlot }
+  b: { teamId: string; slot: TeamSlot },
+  names?: { a: string; b: string }
 ) {
   return run(eventId, async () => {
     if (a.teamId === b.teamId) fail('Pick players from two different teams.')
+    const nameA = names ? str(names.a) : null
+    const nameB = names ? str(names.b) : null
+    if (names && (!nameA || !nameB)) fail('Team name is required.')
     const [teamA, teamB] = await Promise.all([getTeam(eventId, a.teamId), getTeam(eventId, b.teamId)])
     const col = (s: TeamSlot): 'captain_id' | 'partner_id' => (s === 'captain' ? 'captain_id' : 'partner_id')
     const playerA = teamA[col(a.slot)]
@@ -437,20 +441,21 @@ export async function swapPlayers(
 
     const profiles = await getProfiles([playerA, playerB])
     const now = new Date().toISOString()
-    const patch = (slot: TeamSlot, playerId: string) => ({
+    const patch = (slot: TeamSlot, playerId: string, teamName: string | null) => ({
       [col(slot)]: playerId,
+      ...(teamName ? { team_name: teamName } : {}),
       ...(slot === 'partner'
         ? { partner_code: profiles.get(playerId)?.player_code ?? '', partner_confirmed: true }
         : { captain_confirmed: true }),
       updated_at: now,
     })
 
-    const { error: e1 } = await supabaseAdmin.from('team_registrations').update(patch(a.slot, playerB)).eq('id', teamA.id)
+    const { error: e1 } = await supabaseAdmin.from('team_registrations').update(patch(a.slot, playerB, nameA)).eq('id', teamA.id)
     dbFail('Swap failed', e1)
-    const { error: e2 } = await supabaseAdmin.from('team_registrations').update(patch(b.slot, playerA)).eq('id', teamB.id)
+    const { error: e2 } = await supabaseAdmin.from('team_registrations').update(patch(b.slot, playerA, nameB)).eq('id', teamB.id)
     if (e2) {
       // Roll back the first update so nobody ends up in two teams.
-      await supabaseAdmin.from('team_registrations').update(patch(a.slot, playerA)).eq('id', teamA.id)
+      await supabaseAdmin.from('team_registrations').update(patch(a.slot, playerA, teamA.team_name)).eq('id', teamA.id)
       fail(`Swap failed: ${e2.message}`)
     }
     return undefined
