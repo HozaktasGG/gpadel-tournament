@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { adminGuard } from '@/lib/admin-auth'
 import { createClient } from '@supabase/supabase-js'
+import { americanoFormat, generateRegularRounds, totalRounds } from '@/lib/americano-format'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,6 +21,17 @@ export async function POST(req: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
+
+    const { data: eventRow, error: eventError } = await supabase
+      .from('events')
+      .select('format')
+      .eq('id', eventId)
+      .maybeSingle()
+    if (eventError || !eventRow) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 })
+    }
+    const format = americanoFormat(eventRow.format)
+    const finalRound = totalRounds(format)
 
     // Fetch approved registrations for the selected event
     const { data: regRows, error: regError } = await supabase
@@ -93,14 +105,14 @@ export async function POST(req: Request) {
     const idByIndex = new Map<number, string>()
     for (const p of insertedPlayers) idByIndex.set(p.player_index, p.id)
 
-    // Create 4 rounds
+    // Regular rounds + finals round (last)
     const { data: rounds, error: re } = await supabase
       .from('tournament_rounds')
       .insert(
-        [1, 2, 3, 4].map(n => ({
+        Array.from({ length: finalRound }, (_, i) => i + 1).map(n => ({
           tournament_id: t.id,
           round_number: n,
-          duration_minutes: n === 4 ? 30 : 20,
+          duration_minutes: n === finalRound ? format.finalsMinutes : format.regularRoundMinutes,
           status: n === 1 ? 'active' : 'pending',
         }))
       )
@@ -108,59 +120,16 @@ export async function POST(req: Request) {
     if (re) throw re
     if (!rounds) throw new Error('Rounds insert returned no rows')
 
-    const pairKey = (a: number, b: number) => (a < b ? `${a}|${b}` : `${b}|${a}`)
-    const shuffle = <T,>(arr: T[]): T[] => {
-      const a = [...arr]
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1))
-        ;[a[i], a[j]] = [a[j], a[i]]
-      }
-      return a
-    }
-
-    const generateRoundMatching = (used: Set<string>): [number, number][] | null => {
-      const playerIdx = Array.from({ length: 12 }, (_, i) => i)
-      for (let attempt = 0; attempt < 1000; attempt++) {
-        const order = shuffle(playerIdx)
-        const pairs: [number, number][] = []
-        let ok = true
-        for (let i = 0; i < 12; i += 2) {
-          const a = order[i], b = order[i + 1]
-          if (used.has(pairKey(a, b))) { ok = false; break }
-          pairs.push([a, b])
-        }
-        if (ok) return pairs
-      }
-      return null
-    }
-
-    let roundPairs: [number, number][][] | null = null
-    for (let bigAttempt = 0; bigAttempt < 200; bigAttempt++) {
-      const used = new Set<string>()
-      const attempt: [number, number][][] = []
-      let ok = true
-      for (let r = 0; r < 3; r++) {
-        const m = generateRoundMatching(used)
-        if (!m) { ok = false; break }
-        m.forEach(([a, b]) => used.add(pairKey(a, b)))
-        attempt.push(m)
-      }
-      if (ok) { roundPairs = attempt; break }
-    }
-    if (!roundPairs) throw new Error('Could not generate unique-partner schedule')
-
+    const regularRounds = generateRegularRounds(format.regularRounds)
     const matches: any[] = []
-    for (let r = 0; r < 3; r++) {
+    regularRounds.forEach((roundMatches, r) => {
       const round = rounds.find(x => x.round_number === r + 1)
       if (!round) throw new Error(`Round ${r + 1} missing`)
-      const shuffledPairs = shuffle(roundPairs[r])
-      for (let c = 0; c < 3; c++) {
-        const team1 = shuffledPairs[c * 2]
-        const team2 = shuffledPairs[c * 2 + 1]
+      for (const { court, team1, team2 } of roundMatches) {
         matches.push({
           tournament_id: t.id,
           round_id: round.id,
-          court_number: c + 1,
+          court_number: court,
           team1_player1: idByIndex.get(team1[0])!,
           team1_player2: idByIndex.get(team1[1])!,
           team2_player1: idByIndex.get(team2[0])!,
@@ -168,11 +137,11 @@ export async function POST(req: Request) {
           status: 'pending',
         })
       }
-    }
+    })
     const { error: me } = await supabase.from('tournament_matches').insert(matches)
     if (me) throw me
 
-    console.log('START: created tournament', t.id, 'with', matches.length, 'matches')
+    console.log('START: created tournament', t.id, format.name, 'with', matches.length, 'matches')
     return NextResponse.json({ success: true, tournamentId: t.id, playerCount: players.length })
   } catch (e: any) {
     console.error('START ERROR:', e)

@@ -35,6 +35,7 @@ type State = {
     status: string
     current_round: number
   } | null
+  event: { id: string; name: string; format: string | null } | null
   players: Player[]
   rounds: Round[]
 }
@@ -186,8 +187,9 @@ function CourtAmericanoView() {
     )
   }
 
-  const { tournament, players, rounds } = state
+  const { tournament, event, players, rounds } = state
   const currentRound = rounds.find(r => r.round_number === tournament.current_round)
+  const finalRound = rounds.length > 0 ? Math.max(...rounds.map(r => r.round_number)) : 4
   const isFinished = tournament.status === 'finished'
   const isLive = tournament.status === 'active' || tournament.status === 'live' || tournament.status === 'in_progress'
 
@@ -197,8 +199,8 @@ function CourtAmericanoView() {
         <div className="flex flex-col items-center mb-8">
           <img src="/smashpadel_logo.png" alt="Smash Padel" width={72} height={72} className="rounded-full mb-3" />
           <p className="text-xs tracking-[0.3em] uppercase text-white/60">SmashTorino</p>
-          <h1 className="text-2xl font-bold text-white mt-2 text-center">GPadel Tournament</h1>
-          <p className="text-xs text-white/60 mt-1">Court Americano</p>
+          <h1 className="text-2xl font-bold text-white mt-2 text-center">{event?.name ?? 'Tournament'}</h1>
+          <p className="text-xs text-white/60 mt-1">{event?.format ?? 'Americano'}</p>
           {isLive && (
             <span
               className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest"
@@ -227,11 +229,11 @@ function CourtAmericanoView() {
           ) : (
             <>
               <p className="text-xs tracking-[0.25em] uppercase font-semibold" style={{ color: '#ff6b35' }}>
-                Round {tournament.current_round} / 4
+                Round {tournament.current_round} / {finalRound}
               </p>
               <p className="text-sm text-white/80 mt-1">
                 {currentRound?.duration_minutes ?? 20} minutes ·{' '}
-                {tournament.current_round < 4 ? 'Group Stage' : 'Final Round'}
+                {tournament.current_round < finalRound ? 'Group Stage' : 'Final Round'}
               </p>
             </>
           )}
@@ -347,7 +349,7 @@ function CourtAmericanoView() {
                 >
                   <p className="text-sm font-semibold text-white">
                     Round {r.round_number}{' '}
-                    {r.round_number === 4 && <span className="text-xs text-white/50">(Final)</span>}
+                    {r.round_number === finalRound && <span className="text-xs text-white/50">(Final)</span>}
                   </p>
                   <span
                     className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"

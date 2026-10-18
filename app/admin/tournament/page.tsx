@@ -64,7 +64,12 @@ export default function AdminTournamentPage() {
     }
     return (
       <main className="min-h-screen p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
-        <AmericanoManager eventId={selected.id} onBack={() => setSelected(null)} />
+        <AmericanoManager
+          eventId={selected.id}
+          eventFormat={selected.format}
+          eventTime={selected.time}
+          onBack={() => setSelected(null)}
+        />
       </main>
     )
   }
@@ -97,7 +102,7 @@ export default function AdminTournamentPage() {
                 : isTeam
                 ? { backgroundColor: 'rgba(255,107,53,0.15)', color: '#ff6b35' }
                 : { backgroundColor: 'rgba(59,130,246,0.15)', color: '#3b82f6' }
-              const badgeLabel = isTeamAmericano ? 'Team Americano' : isTeam ? 'Team' : 'Americano'
+              const badgeLabel = isTeamAmericano ? 'Team Americano' : isTeam ? 'Team' : ev.format === 'Americano 120' ? 'Americano 120' : 'Americano'
               return (
                 <div
                   key={ev.id}

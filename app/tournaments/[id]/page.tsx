@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import RegisterButton from './register-button'
 import TeamRegisterSection from './team-register-section'
+import AmericanoSchedule from '@/components/AmericanoSchedule'
+import { AMERICANO_FORMATS, FINALS_BONUS } from '@/lib/americano-format'
 
 type EventRow = {
   id: string
@@ -65,6 +67,7 @@ type StandingView = {
 }
 
 type TournamentResultsView = {
+  finalRound: number
   rounds: TournamentRoundView[]
   standings: StandingView[]
 }
@@ -159,6 +162,7 @@ export default async function TournamentDetailPage({
   const { data: { user } } = await supabase.auth.getUser()
 
   const isTeamFormat = ev.format === 'Team' || ev.format === 'Team Americano'
+  const americano = ev.format ? AMERICANO_FORMATS[ev.format] : undefined
   const registrationOpen = ev.registration_open !== false
 
   let isRegistered = false
@@ -260,18 +264,18 @@ export default async function TournamentDetailPage({
   const isFinished = ev.date < todayString() || ev.status === 'finished' || ev.status === 'completed'
 
   let tournamentResults: TournamentResultsView | null = null
-  if (ev.status === 'completed') {
+  if (ev.status === 'completed' || ev.status === 'finished') {
     const { data: completedTournament } = await supabase
       .from('tournaments')
       .select('id')
-      .eq('status', 'completed')
+      .in('status', ['finished', 'completed'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
     if (completedTournament) {
       const tournamentId = completedTournament.id
-      const [matchesRes, roundsRes] = await Promise.all([
+      const [matchesRes, roundsRes, playersRes] = await Promise.all([
         supabase
           .from('tournament_matches')
           .select('*')
@@ -282,10 +286,19 @@ export default async function TournamentDetailPage({
           .select('*')
           .eq('tournament_id', tournamentId)
           .order('round_number', { ascending: true }),
+        supabase
+          .from('tournament_players')
+          .select('id, player_name')
+          .eq('tournament_id', tournamentId),
       ])
 
       const matches = matchesRes.data ?? []
       const rounds = roundsRes.data ?? []
+      // Matches store tournament_players ids; older rows may hold names directly
+      const playerNameById = new Map<string, string>(
+        (playersRes.data ?? []).map((p: any) => [p.id, p.player_name ?? ''])
+      )
+      const playerName = (v: string | null) => (v ? playerNameById.get(v) ?? v : '—')
 
       const roundNumberById = new Map<string, number>(
         rounds.map((r: any) => [r.id, r.round_number])
@@ -308,40 +321,35 @@ export default async function TournamentDetailPage({
           .map((m: any) => ({
             id: m.id,
             court_number: m.court_number,
-            team1_player1: m.team1_player1 ?? '—',
-            team1_player2: m.team1_player2 ?? '—',
-            team2_player1: m.team2_player1 ?? '—',
-            team2_player2: m.team2_player2 ?? '—',
+            team1_player1: playerName(m.team1_player1),
+            team1_player2: playerName(m.team1_player2),
+            team2_player1: playerName(m.team2_player1),
+            team2_player2: playerName(m.team2_player2),
             team1_score: m.team1_score,
             team2_score: m.team2_score,
           })),
       }))
 
-      // Final Standings — based on Round 4 court results
-      const round4Id = (rounds as any[]).find((r: any) => r.round_number === 4)?.id
-      const round4Matches = (matches as any[])
-        .filter(m => m.round_id === round4Id)
+      // Final Standings — based on the finals (last round) court results
+      const finalRound = rounds.length > 0 ? Math.max(...(rounds as any[]).map((r: any) => r.round_number)) : 4
+      const finalsRoundId = (rounds as any[]).find((r: any) => r.round_number === finalRound)?.id
+      const finalsRoundMatches = (matches as any[])
+        .filter(m => m.round_id === finalsRoundId)
         .sort((a: any, b: any) => a.court_number - b.court_number)
 
-      const bonusMap: Record<number, { winner: number; loser: number }> = {
-        1: { winner: 80, loser: 50 },
-        2: { winner: 30, loser: 10 },
-        3: { winner: -5, loser: -15 },
-      }
-
       const standings: StandingView[] = []
-      for (const match of round4Matches) {
-        const bonus = bonusMap[match.court_number]
+      for (const match of finalsRoundMatches) {
+        const bonus = FINALS_BONUS[match.court_number]
         if (!bonus) continue
         const team1 = [match.team1_player1, match.team1_player2]
           .filter(Boolean)
-          .map((n: string) => normalizeName(n))
+          .map((n: string) => normalizeName(playerName(n)))
         const team2 = [match.team2_player1, match.team2_player2]
           .filter(Boolean)
-          .map((n: string) => normalizeName(n))
+          .map((n: string) => normalizeName(playerName(n)))
         const t1 = match.team1_score ?? 0
         const t2 = match.team2_score ?? 0
-        const team1Won = t1 > t2
+        const team1Won = t1 >= t2 // same tie rule as end-round
         const winnerTeam = team1Won ? team1 : team2
         const loserTeam = team1Won ? team2 : team1
         const baseRank = (match.court_number - 1) * 2 + 1
@@ -350,7 +358,7 @@ export default async function TournamentDetailPage({
       }
       standings.sort((a, b) => a.rank - b.rank)
 
-      tournamentResults = { rounds: groupedRounds, standings }
+      tournamentResults = { finalRound, rounds: groupedRounds, standings }
     }
   }
 
@@ -424,6 +432,12 @@ export default async function TournamentDetailPage({
               </div>
             )}
           </div>
+
+          {americano?.showSchedule && (
+            <div className="px-6 sm:px-8 py-5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <AmericanoSchedule format={americano} startTime={ev.time} />
+            </div>
+          )}
 
           {(ev.description || ev.pdf_url) && (
             <div className="px-6 sm:px-8 py-5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
@@ -618,13 +632,13 @@ export default async function TournamentDetailPage({
           </div>
 
           {/* Match Results (completed events only) */}
-          {ev.status === 'completed' && tournamentResults && (
+          {tournamentResults && (
             <div className="px-6 sm:px-8 py-6" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
               <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4">
                 Match Results
               </p>
 
-              {/* Final Standings — based on Round 4 court results */}
+              {/* Final Standings — based on the finals court results */}
               {tournamentResults.standings.length > 0 && (
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold text-white/90 mb-3">🏆 Final Standings</h3>
@@ -680,10 +694,10 @@ export default async function TournamentDetailPage({
                 </div>
               )}
 
-              {/* Round Results (R1-R3) */}
+              {/* Round Results (regular rounds) */}
               {(() => {
-                const groupRounds = tournamentResults.rounds.filter(r => r.roundNumber <= 3)
-                const finalRound = tournamentResults.rounds.find(r => r.roundNumber === 4)
+                const groupRounds = tournamentResults.rounds.filter(r => r.roundNumber < tournamentResults.finalRound)
+                const finalRound = tournamentResults.rounds.find(r => r.roundNumber === tournamentResults.finalRound)
                 const renderMatch = (m: TournamentMatchView) => {
                   const t1 = m.team1_score ?? 0
                   const t2 = m.team2_score ?? 0
@@ -770,7 +784,7 @@ export default async function TournamentDetailPage({
                             style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
                           >
                             <p className="text-sm font-semibold text-white">
-                              Round 4 <span className="text-xs text-white/50">(Final — by ranking)</span>
+                              Round {finalRound.roundNumber} <span className="text-xs text-white/50">(Final — by ranking)</span>
                             </p>
                             <span
                               className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full"

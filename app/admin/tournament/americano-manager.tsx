@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import { americanoFormat, totalRounds } from '@/lib/americano-format'
+import AmericanoSchedule from '@/components/AmericanoSchedule'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,10 +47,13 @@ type DBPlayer = {
 
 type Props = {
   eventId: string
+  eventFormat: string | null
+  eventTime: string | null
   onBack: () => void
 }
 
-export default function AmericanoManager({ eventId, onBack }: Props) {
+export default function AmericanoManager({ eventId, eventFormat, eventTime, onBack }: Props) {
+  const format = americanoFormat(eventFormat)
 
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [rounds, setRounds] = useState<DBRound[]>([])
@@ -150,6 +155,8 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
   const playerById = new Map(players.map(p => [p.id, p]))
   const nameOf = (id: string) => playerById.get(id)?.player_name ?? '—'
 
+  // A running tournament keeps the round count it was started with
+  const finalRound = rounds.length > 0 ? Math.max(...rounds.map(r => r.round_number)) : totalRounds(format)
   const currentRound = rounds.find(r => r.round_number === tournament?.current_round)
   const currentMatches = currentRound
     ? matches
@@ -244,6 +251,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
         body: JSON.stringify({
           tournamentId: tournament.id,
           roundNumber: tournament.current_round,
+          eventId,
         }),
       })
       const data = await res.json()
@@ -307,8 +315,14 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
         <section>
           <h2 className="text-sm font-semibold text-white mb-3">New Tournament</h2>
           <p className="text-xs text-white/60 mb-4">
-            Court Americano. 12 players, 3 courts, 4 rounds. Players are fetched automatically from approved event registrations.
+            Court Americano{format.name !== 'Americano' ? ` (${format.name})` : ''}. 12 players, 3 courts, {totalRounds(format)} rounds
+            ({format.regularRounds} regular + finals). Players are fetched automatically from approved event registrations.
           </p>
+          {format.showSchedule && (
+            <div className="mb-5">
+              <AmericanoSchedule format={format} startTime={eventTime} />
+            </div>
+          )}
           <div
             className="rounded-xl px-4 py-3 mb-5 text-sm"
             style={{ backgroundColor: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)' }}
@@ -338,6 +352,11 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
 
       {tournament && (
         <>
+          {format.showSchedule && (
+            <div className="mb-6">
+              <AmericanoSchedule format={format} startTime={eventTime} />
+            </div>
+          )}
           <div className="mb-6 rounded-xl p-5" style={{ backgroundColor: '#0f2318', border: '1px solid #2d5a40' }}>
             <div className="flex items-start justify-between flex-wrap gap-3">
               <div>
@@ -345,7 +364,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
                 <p className="text-2xl font-bold mt-1 text-white">
                   {tournament.status === 'finished'
                     ? 'Tournament Finished'
-                    : `Round ${tournament.current_round} / 4`}
+                    : `Round ${tournament.current_round} / ${finalRound}`}
                 </p>
               </div>
               <button
@@ -461,9 +480,9 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
               >
                 {busy
                   ? '...'
-                  : currentRound.round_number === 4
+                  : currentRound.round_number === finalRound
                   ? 'End Tournament'
-                  : currentRound.round_number === 3
+                  : currentRound.round_number === finalRound - 1
                   ? 'End Round & Start Final'
                   : 'End Round & Next Round'}
               </button>
@@ -532,7 +551,7 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
                     >
                       <p className="text-sm font-bold text-white">
                         Round {r.round_number}
-                        {r.round_number === 4 && (
+                        {r.round_number === finalRound && (
                           <span className="ml-2 text-xs font-normal text-white/50">(Final — by ranking)</span>
                         )}
                       </p>
@@ -553,8 +572,8 @@ export default function AmericanoManager({ eventId, onBack }: Props) {
                     </div>
                     {rMatches.length === 0 ? (
                       <p className="px-4 py-3 text-xs text-white/60">
-                        {r.round_number === 4
-                          ? 'Generated after Round 3 by ranking.'
+                        {r.round_number === finalRound
+                          ? `Generated after Round ${finalRound - 1} by ranking.`
                           : 'No matches.'}
                       </p>
                     ) : (

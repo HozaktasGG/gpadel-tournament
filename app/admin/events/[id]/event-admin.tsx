@@ -23,7 +23,7 @@ export type AdminCtx = {
   editProfile: (id: string) => void
 }
 
-const FORMATS = ['Americano', 'Team Americano', 'Team', 'Round Robin', 'Elimination']
+const FORMATS = ['Americano', 'Americano 120', 'Team Americano', 'Team', 'Round Robin', 'Elimination']
 const STATUSES = ['upcoming', 'active', 'completed']
 
 export default function EventAdmin({

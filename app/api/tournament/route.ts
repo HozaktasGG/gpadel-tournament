@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { AMERICANO_FORMAT_NAMES } from '@/lib/americano-format'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,8 +18,26 @@ export async function GET() {
     .maybeSingle()
 
   if (!tournament) {
-    return NextResponse.json({ tournament: null, players: [], rounds: [] })
+    return NextResponse.json({ tournament: null, event: null, players: [], rounds: [] })
   }
+
+  // tournaments has no event link: use the live Americano event, else the latest one
+  // that has started.
+  const eventQuery = () =>
+    supabase.from('events').select('id, name, format').in('format', AMERICANO_FORMAT_NAMES)
+  const { data: activeEvent } = await eventQuery()
+    .eq('status', 'active')
+    .order('date', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const { data: recentEvent } = activeEvent
+    ? { data: null }
+    : await eventQuery()
+        .lte('date', new Date().toISOString().slice(0, 10))
+        .order('date', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+  const event = activeEvent ?? recentEvent
 
   const [playersRes, roundsRes, matchesRes] = await Promise.all([
     supabase
@@ -89,6 +108,7 @@ export async function GET() {
       status: tournament.status,
       current_round: tournament.current_round,
     },
+    event: event ? { id: event.id, name: event.name, format: event.format } : null,
     players: ranked,
     rounds,
   })

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { adminGuard } from '@/lib/admin-auth'
 import { createClient } from '@supabase/supabase-js'
 import { getLevel } from '@/lib/quiz-questions'
+import { finalsMatches, finalsPlacements } from '@/lib/americano-format'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,8 +17,8 @@ function bonusForRank(rank: number): number {
 
 export async function POST(req: Request) {
   try {
-    const { tournamentId, roundNumber } = await req.json()
-    console.log('END-ROUND:', { tournamentId, roundNumber })
+    const { tournamentId, roundNumber, eventId } = await req.json()
+    console.log('END-ROUND:', { tournamentId, roundNumber, eventId })
 
     const denied = await adminGuard()
     if (denied) return denied
@@ -35,6 +36,17 @@ export async function POST(req: Request) {
       .eq('round_number', roundNumber)
       .single()
     if (roundErr) throw roundErr
+
+    // The finals is always the last round, whatever the format's round count
+    const { data: lastRound, error: lastErr } = await supabase
+      .from('tournament_rounds')
+      .select('round_number')
+      .eq('tournament_id', tournamentId)
+      .order('round_number', { ascending: false })
+      .limit(1)
+      .single()
+    if (lastErr) throw lastErr
+    const finalRound: number = lastRound.round_number
 
     // Round'un maçlarını al
     const { data: matches, error: matchesErr } = await supabase
@@ -103,12 +115,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Round not found' }, { status: 404 })
     }
 
-    if (roundNumber === 4) {
+    if (roundNumber === finalRound) {
       // Final round — court-based team scoring
-      const bonusMap: Record<number, { winner: number; loser: number }> = {
-        1: { winner: 80, loser: 50 },   // C1: 1-2 vs 3-4
-        2: { winner: 30, loser: 10 },   // C2: 5-6 vs 7-8
-        3: { winner: -10, loser: -25 }, // C3: 9-10 vs 11-12
+
+      // tournaments has no event link, so the admin client sends the eventId
+      let historyReason = 'Court Americano'
+      if (typeof eventId === 'string' && eventId) {
+        const { data: ev } = await supabase.from('events').select('name').eq('id', eventId).maybeSingle()
+        if (ev?.name) historyReason = ev.name
       }
 
       // Build player UUID → name map from tournament_players
@@ -117,24 +131,13 @@ export async function POST(req: Request) {
 
       for (const match of matches) {
         const courtNum: number = match.court_number
-        const bonus = bonusMap[courtNum]
-        if (!bonus) continue
-
-        const team1Won = (match.team1_score ?? 0) >= (match.team2_score ?? 0)
-        const winnerIds: string[] = team1Won
-          ? [match.team1_player1, match.team1_player2]
-          : [match.team2_player1, match.team2_player2]
-        const loserIds: string[] = team1Won
-          ? [match.team2_player1, match.team2_player2]
-          : [match.team1_player1, match.team1_player2]
-
-        const winnerRank = (courtNum - 1) * 4 + 1
-        const loserRank = (courtNum - 1) * 4 + 3
-
-        const entries = [
-          ...winnerIds.map(id => ({ id, playerBonus: bonus.winner, rank: winnerRank })),
-          ...loserIds.map(id => ({ id, playerBonus: bonus.loser, rank: loserRank })),
-        ]
+        const entries = finalsPlacements<string>({
+          court_number: courtNum,
+          team1_score: match.team1_score,
+          team2_score: match.team2_score,
+          team1: [match.team1_player1, match.team1_player2],
+          team2: [match.team2_player1, match.team2_player2],
+        }).map(e => ({ id: e.player, playerBonus: e.bonus, rank: e.rank }))
 
         for (const { id, playerBonus, rank } of entries) {
           const playerName = playerNameMap.get(id) ?? ''
@@ -159,7 +162,7 @@ export async function POST(req: Request) {
 
           const { data: profileMatches, error: profileErr } = await profileQuery
           if (profileErr || !profileMatches || profileMatches.length === 0) {
-            console.log(`END-ROUND R4: no profile for "${playerName}"`)
+            console.log(`END-ROUND finals: no profile for "${playerName}"`)
             continue
           }
 
@@ -178,18 +181,18 @@ export async function POST(req: Request) {
             .eq('id', profile.id)
 
           if (updErr) {
-            console.error(`END-ROUND R4 update error for "${playerName}":`, updErr)
+            console.error(`END-ROUND finals update error for "${playerName}":`, updErr)
           } else {
-            console.log(`END-ROUND R4: ${playerName} court=${courtNum} rank=${rank} ${current}→${newScore} (${playerBonus >= 0 ? '+' : ''}${playerBonus})`)
+            console.log(`END-ROUND finals: ${playerName} court=${courtNum} rank=${rank} ${current}→${newScore} (${playerBonus >= 0 ? '+' : ''}${playerBonus})`)
             const { error: histErr } = await supabase.from('score_history').insert({
               user_id: profile.id,
               score: newScore,
               change: playerBonus,
-              reason: 'GPadel Tournament April 2026',
+              reason: historyReason,
               tournament_id: tournamentId,
             })
             if (histErr) {
-              console.error(`END-ROUND R4 score_history insert error for "${playerName}":`, histErr)
+              console.error(`END-ROUND finals score_history insert error for "${playerName}":`, histErr)
             }
           }
         }
@@ -221,8 +224,8 @@ export async function POST(req: Request) {
       .update({ current_round: nextNum })
       .eq('id', tournamentId)
 
-    // R4 ise sıralamaya göre eşleşme oluştur
-    if (nextNum === 4) {
+    // Finals ise sıralamaya göre eşleşme oluştur
+    if (nextNum === finalRound) {
       const { data: ranked, error: rankErr } = await supabase
         .from('tournament_players')
         .select('*')
@@ -232,23 +235,19 @@ export async function POST(req: Request) {
       if (rankErr) throw rankErr
       if (!ranked || ranked.length !== 12) throw new Error('Expected 12 ranked players')
 
-      const matches4: any[] = []
-      for (let c = 0; c < 3; c++) {
-        const base = c * 4
-        matches4.push({
-          tournament_id: tournamentId,
-          round_id: nextRound.id,
-          court_number: c + 1,
-          team1_player1: ranked[base].id,     // rank N
-          team1_player2: ranked[base + 3].id, // rank N+3
-          team2_player1: ranked[base + 1].id, // rank N+1
-          team2_player2: ranked[base + 2].id, // rank N+2
-          status: 'pending',
-        })
-      }
+      const matches4 = finalsMatches(ranked).map(m => ({
+        tournament_id: tournamentId,
+        round_id: nextRound.id,
+        court_number: m.court,
+        team1_player1: m.team1[0].id, // rank N
+        team1_player2: m.team1[1].id, // rank N+3
+        team2_player1: m.team2[0].id, // rank N+1
+        team2_player2: m.team2[1].id, // rank N+2
+        status: 'pending',
+      }))
       const { error: m4Err } = await supabase.from('tournament_matches').insert(matches4)
       if (m4Err) throw m4Err
-      console.log('END-ROUND: generated R4 by ranking')
+      console.log(`END-ROUND: generated R${finalRound} (finals) by ranking`)
     }
 
     return NextResponse.json({ success: true, nextRound: nextNum })

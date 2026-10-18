@@ -601,6 +601,7 @@ export default function AdminPage() {
                   style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                   <option value="Americano">Americano</option>
+                  <option value="Americano 120">Americano 120</option>
                   <option value="Round Robin">Round Robin</option>
                   <option value="Elimination">Elimination</option>
                   <option value="Team">Team</option>
@@ -1189,6 +1190,7 @@ export default function AdminPage() {
                     style={{ backgroundColor: '#1a3d2e', border: '1px solid rgba(255,255,255,0.1)' }}
                   >
                     <option value="Americano">Americano</option>
+                    <option value="Americano 120">Americano 120</option>
                     <option value="Round Robin">Round Robin</option>
                     <option value="Elimination">Elimination</option>
                     <option value="Team">Team</option>
