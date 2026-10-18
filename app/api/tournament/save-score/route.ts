@@ -17,6 +17,28 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    // Locked once it has been counted: regular scores after the finals are drawn
+    // (they decided the seeding), and everything once the tournament is finished
+    const { data: match, error: matchErr } = await supabase
+      .from('tournament_matches')
+      .select('id, tournament_id, round_id')
+      .eq('id', matchId)
+      .maybeSingle()
+    if (matchErr) throw matchErr
+    if (!match) return NextResponse.json({ error: 'Match not found' }, { status: 404 })
+    const [{ data: tournament }, { data: rounds }] = await Promise.all([
+      supabase.from('tournaments').select('status').eq('id', match.tournament_id).single(),
+      supabase.from('tournament_rounds').select('id, round_number, status').eq('tournament_id', match.tournament_id),
+    ])
+    if (tournament?.status === 'finished') {
+      return NextResponse.json({ error: 'Tournament is finished; scores are locked' }, { status: 409 })
+    }
+    const finalRound = Math.max(...(rounds ?? []).map(r => r.round_number))
+    const finals = rounds?.find(r => r.round_number === finalRound)
+    if (finals && match.round_id !== finals.id && finals.status !== 'pending') {
+      return NextResponse.json({ error: 'Finals already drawn; regular-round scores are locked' }, { status: 409 })
+    }
+
     const { data, error } = await supabase
       .from('tournament_matches')
       .update({

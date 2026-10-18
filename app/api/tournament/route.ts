@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { AMERICANO_FORMAT_NAMES } from '@/lib/americano-format'
+import { AMERICANO_FORMAT_NAMES, americanoFormat, regularStandings } from '@/lib/americano-format'
 
 export const dynamic = 'force-dynamic'
 
@@ -87,6 +87,43 @@ export async function GET() {
       matches: roundMatches,
     }
   })
+
+  // All-rounds-at-once formats: until the finals are drawn, standings are computed
+  // live from every scored regular-round match (point differential, then games won)
+  const allRounds = roundsRes.data ?? []
+  const finalRound = allRounds.length > 0 ? Math.max(...allRounds.map(r => r.round_number)) : 0
+  const finalsRound = allRounds.find(r => r.round_number === finalRound)
+  const openRounds =
+    americanoFormat(event?.format).allRoundsAtOnce &&
+    tournament.status === 'active' &&
+    finalsRound?.status === 'pending'
+  if (openRounds) {
+    const regularIds = new Set(allRounds.filter(r => r.round_number < finalRound).map(r => r.id))
+    const standings = regularStandings(
+      players.map(p => ({ id: p.id, name: p.player_name ?? '' })),
+      (matchesRes.data ?? []).filter(m => regularIds.has(m.round_id))
+    )
+    return NextResponse.json({
+      tournament: {
+        id: tournament.id,
+        mode: tournament.mode,
+        status: tournament.status,
+        current_round: tournament.current_round,
+      },
+      event: event ? { id: event.id, name: event.name, format: event.format } : null,
+      openRounds: true,
+      regularRounds: regularIds.size,
+      players: standings.map(s => ({
+        id: s.id,
+        name: s.name,
+        total_games_won: s.diff,
+        games_won: s.gamesWon,
+        games_played: s.played,
+        rank: s.rank,
+      })),
+      rounds,
+    })
+  }
 
   const ranked = [...players]
     .map(p => ({

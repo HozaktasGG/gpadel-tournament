@@ -61,6 +61,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'All scores must be entered' }, { status: 400 })
     }
 
+    // Round'u bitir — claimed first and only once, so a second click (or a retry)
+    // can never apply round totals or finals bonuses twice
+    const { data: finData, error: finErr } = await supabase
+      .from('tournament_rounds')
+      .update({ status: 'completed' })
+      .eq('id', round.id)
+      .neq('status', 'completed')
+      .select()
+    if (finErr) throw finErr
+    const finAffected = finData?.length ?? 0
+    console.log('END-ROUND round update affected rows:', finAffected)
+    if (finAffected === 0) {
+      return NextResponse.json({ error: 'Round already ended' }, { status: 409 })
+    }
+
     // Oyuncu puanlarını topla — keyed by player UUID
     const { data: players, error: playersErr } = await supabase
       .from('tournament_players')
@@ -100,19 +115,6 @@ export async function POST(req: Request) {
           .eq('id', player.id)
         if (uErr) throw uErr
       }
-    }
-
-    // Round'u bitir
-    const { data: finData, error: finErr } = await supabase
-      .from('tournament_rounds')
-      .update({ status: 'completed' })
-      .eq('id', round.id)
-      .select()
-    if (finErr) throw finErr
-    const finAffected = finData?.length ?? 0
-    console.log('END-ROUND round update affected rows:', finAffected)
-    if (finAffected === 0) {
-      return NextResponse.json({ error: 'Round not found' }, { status: 404 })
     }
 
     if (roundNumber === finalRound) {

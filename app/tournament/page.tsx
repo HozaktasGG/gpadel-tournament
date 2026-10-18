@@ -36,6 +36,9 @@ type State = {
     current_round: number
   } | null
   event: { id: string; name: string; format: string | null } | null
+  // All regular rounds open at once (e.g. Americano 120) until the finals are drawn
+  openRounds?: boolean
+  regularRounds?: number
   players: Player[]
   rounds: Round[]
 }
@@ -229,17 +232,19 @@ function CourtAmericanoView() {
           ) : (
             <>
               <p className="text-xs tracking-[0.25em] uppercase font-semibold" style={{ color: '#ff6b35' }}>
-                Round {tournament.current_round} / {finalRound}
+                {state.openRounds
+                  ? `Rounds 1–${state.regularRounds} · Finals = Round ${finalRound}`
+                  : `Round ${tournament.current_round} / ${finalRound}`}
               </p>
               <p className="text-sm text-white/80 mt-1">
                 {currentRound?.duration_minutes ?? 20} minutes ·{' '}
-                {tournament.current_round < finalRound ? 'Group Stage' : 'Final Round'}
+                {state.openRounds ? 'Group Stage · standings by point differential' : tournament.current_round < finalRound ? 'Group Stage' : 'Final Round'}
               </p>
             </>
           )}
         </div>
 
-        {!isFinished && currentRound && currentRound.matches.length > 0 && (
+        {!isFinished && !state.openRounds && currentRound && currentRound.matches.length > 0 && (
           <section className="mb-8">
             <h2 className="text-sm font-semibold text-white/90 mb-3">Current Matches</h2>
             <div className="space-y-3">
@@ -363,7 +368,7 @@ function CourtAmericanoView() {
                       color: r.status === 'active' ? '#fff' : 'rgba(255,255,255,0.6)',
                     }}
                   >
-                    {r.status}
+                    {state.openRounds && r.round_number < finalRound ? 'open' : r.status}
                   </span>
                 </div>
                 {r.matches.length === 0 ? (

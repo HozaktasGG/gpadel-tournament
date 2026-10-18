@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import { americanoFormat, totalRounds } from '@/lib/americano-format'
+import { americanoFormat, isValidSeeding, regularStandings, totalRounds } from '@/lib/americano-format'
 import AmericanoSchedule from '@/components/AmericanoSchedule'
 
 const supabase = createClient(
@@ -66,6 +66,8 @@ export default function AmericanoManager({ eventId, eventFormat, eventTime, onBa
   const [busyMatchId, setBusyMatchId] = useState('')
   const [savedMatchId, setSavedMatchId] = useState('')
   const [loaded, setLoaded] = useState(false)
+  const [seedOrder, setSeedOrder] = useState<string[] | null>(null)
+  const [tiesConfirmed, setTiesConfirmed] = useState(false)
   const pollRef = useRef<number | null>(null)
   const countLoadedRef = useRef(false)
 
@@ -168,6 +170,57 @@ export default function AmericanoManager({ eventId, eventFormat, eventTime, onBa
     !!currentRound &&
     currentMatches.length > 0 &&
     currentMatches.every(m => m.team1_score !== null && m.team2_score !== null)
+
+  // All-rounds-at-once: every regular round is open until the finals are drawn
+  const finalsRoundRow = rounds.find(r => r.round_number === finalRound)
+  const regularRounds = rounds.filter(r => r.round_number < finalRound)
+  const regularRoundIds = new Set(regularRounds.map(r => r.id))
+  const regularMatches = matches.filter(m => regularRoundIds.has(m.round_id))
+  const isScored = (m: DBMatch) => m.team1_score !== null && m.team2_score !== null
+  const openMode = format.allRoundsAtOnce && tournament?.status === 'active' && finalsRoundRow?.status === 'pending'
+  const regularScoredCount = regularMatches.filter(isScored).length
+  const regularExpected = regularRounds.length * 3
+  const allRegularScored = regularMatches.length === regularExpected && regularScoredCount === regularExpected
+  const standings = regularStandings(players.map(p => ({ id: p.id, name: p.player_name })), regularMatches)
+  const standingById = new Map(standings.map(s => [s.id, s]))
+  // Admin's tie order is kept only while it is still consistent with the scores
+  const seedingIds = seedOrder && isValidSeeding(standings, seedOrder) ? seedOrder : standings.map(s => s.id)
+  const hasTies = standings.some(s => s.tieGroup !== null)
+
+  const moveSeed = (index: number, dir: -1 | 1) => {
+    const ids = [...seedingIds]
+    const other = index + dir
+    const a = standingById.get(ids[index])
+    const b = standingById.get(ids[other])
+    if (!a || !b || a.tieGroup === null || a.tieGroup !== b.tieGroup) return
+    ;[ids[index], ids[other]] = [ids[other], ids[index]]
+    setSeedOrder(ids)
+  }
+
+  const handleGenerateFinals = async () => {
+    if (!tournament) return
+    if (!confirm('Generate the finals from these standings? Regular-round scores will be locked.')) return
+    setBusy(true)
+    try {
+      const res = await fetch('/api/tournament/generate-finals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournamentId: tournament.id, order: seedingIds }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        alert('ERROR: ' + JSON.stringify(data))
+        return
+      }
+      setSeedOrder(null)
+      setTiesConfirmed(false)
+      await loadAll()
+    } catch (err) {
+      alert('Network error: ' + (err instanceof Error ? err.message : String(err)))
+    } finally {
+      setBusy(false)
+    }
+  }
 
   const rankedPlayers = [...players]
     .map(p => ({
@@ -290,6 +343,88 @@ export default function AmericanoManager({ eventId, eventFormat, eventTime, onBa
     }
   }
 
+  const renderScoreCard = (m: DBMatch) => {
+    const input = scoreInputs[m.id] ?? { t1: '', t2: '' }
+    const scored = m.team1_score !== null && m.team2_score !== null
+    return (
+      <div
+        key={m.id}
+        className="rounded-xl p-4"
+        style={{
+          backgroundColor: '#0f2318',
+          border: `1px solid ${scored ? '#ff6b35' : '#2d5a40'}`,
+        }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#ff6b35' }}>
+            Court {m.court_number}
+          </p>
+          {scored && (
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-green-300">
+              Saved
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-white leading-snug">{nameOf(m.team1_player1)}</p>
+            <p className="text-sm font-semibold text-white leading-snug">{nameOf(m.team1_player2)}</p>
+          </div>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="0"
+            value={input.t1}
+            onChange={e =>
+              setScoreInputs(prev => ({
+                ...prev,
+                [m.id]: { ...input, t1: e.target.value },
+              }))
+            }
+            className="w-14 text-center text-lg font-bold rounded py-2 outline-none text-white"
+            style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+          />
+          <span className="text-white/50">:</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="0"
+            value={input.t2}
+            onChange={e =>
+              setScoreInputs(prev => ({
+                ...prev,
+                [m.id]: { ...input, t2: e.target.value },
+              }))
+            }
+            className="w-14 text-center text-lg font-bold rounded py-2 outline-none text-white"
+            style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
+          />
+          <div className="flex-1 text-right">
+            <p className="text-sm font-semibold text-white leading-snug">{nameOf(m.team2_player1)}</p>
+            <p className="text-sm font-semibold text-white leading-snug">{nameOf(m.team2_player2)}</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => handleSaveScore(m.id)}
+          className="mt-3 w-full py-2 rounded text-xs font-semibold text-white"
+          style={{
+            backgroundColor: savedMatchId === m.id ? '#16a34a' : '#1a3d2e',
+            border: '1px solid #2d5a40',
+          }}
+        >
+          {busyMatchId === m.id
+            ? 'Saving...'
+            : savedMatchId === m.id
+            ? '✓ Saved!'
+            : scored
+            ? 'Update Score'
+            : 'Save Score'}
+        </button>
+      </div>
+    )
+  }
+
   if (!loaded) {
     return (
       <div className="text-sm text-white/70 py-10 text-center">Loading...</div>
@@ -379,7 +514,103 @@ export default function AmericanoManager({ eventId, eventFormat, eventTime, onBa
             </div>
           </div>
 
-          {tournament.status === 'active' && currentRound && (
+          {openMode && (
+            <section className="mb-8">
+              <h2 className="text-sm font-semibold text-white mb-1">Rounds 1–{regularRounds.length} — enter scores in any order</h2>
+              <p className="text-xs text-white/60 mb-4">
+                {regularScoredCount} / {regularExpected} matches scored. Scores can be edited until the finals are generated.
+              </p>
+              <div className="space-y-6">
+                {regularRounds.map(r => (
+                  <div key={r.id}>
+                    <p className="text-xs font-bold uppercase tracking-widest text-white/70 mb-2">Round {r.round_number}</p>
+                    <div className="space-y-3">
+                      {matches
+                        .filter(m => m.round_id === r.id)
+                        .sort((a, b) => a.court_number - b.court_number)
+                        .map(renderScoreCard)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <h2 className="text-sm font-semibold text-white mt-8 mb-1">Finals Seeding</h2>
+              <p className="text-xs text-white/60 mb-3">
+                Point differential over rounds 1–{regularRounds.length}, then games won. Ranks 1–4 → Court 1, 5–8 → Court 2, 9–12 → Court 3.
+              </p>
+              <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #2d5a40' }}>
+                <table className="w-full text-sm">
+                  <thead style={{ backgroundColor: '#0f2318' }}>
+                    <tr className="text-white/60 text-[11px] uppercase tracking-wider">
+                      <th className="py-2 px-3 text-left font-semibold">#</th>
+                      <th className="py-2 px-2 text-left font-semibold">Player</th>
+                      <th className="py-2 px-2 text-right font-semibold">+/-</th>
+                      <th className="py-2 px-2 text-right font-semibold">Games</th>
+                      <th className="py-2 px-2 text-right font-semibold">MP</th>
+                      <th className="py-2 px-3 text-right font-semibold">Tie</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {seedingIds.map((id, i) => {
+                      const st = standingById.get(id)!
+                      const prev = standingById.get(seedingIds[i - 1])
+                      const next = standingById.get(seedingIds[i + 1])
+                      const canUp = st.tieGroup !== null && prev?.tieGroup === st.tieGroup
+                      const canDown = st.tieGroup !== null && next?.tieGroup === st.tieGroup
+                      const courtBreak = i > 0 && i % 4 === 0
+                      return (
+                        <tr
+                          key={id}
+                          style={{
+                            borderTop: courtBreak ? '2px solid #ff6b35' : '1px solid #2d5a40',
+                            backgroundColor: st.tieGroup !== null ? 'rgba(250,204,21,0.08)' : undefined,
+                          }}
+                        >
+                          <td className="py-2 px-3 font-bold text-white">{i + 1}</td>
+                          <td className="py-2 px-2 font-semibold text-white">{st.name}</td>
+                          <td className="py-2 px-2 text-right tabular-nums font-bold" style={{ color: st.diff > 0 ? '#4ade80' : st.diff < 0 ? '#f87171' : '#9ca3af' }}>
+                            {st.diff > 0 ? `+${st.diff}` : st.diff}
+                          </td>
+                          <td className="py-2 px-2 text-right tabular-nums text-white/80">{st.gamesWon}</td>
+                          <td className="py-2 px-2 text-right tabular-nums text-white/60">{st.played}</td>
+                          <td className="py-2 px-3 text-right whitespace-nowrap">
+                            {st.tieGroup !== null && (
+                              <>
+                                <button type="button" disabled={!canUp} onClick={() => moveSeed(i, -1)} className="px-2 text-yellow-300 disabled:opacity-20">▲</button>
+                                <button type="button" disabled={!canDown} onClick={() => moveSeed(i, 1)} className="px-2 text-yellow-300 disabled:opacity-20">▼</button>
+                              </>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              {hasTies && allRegularScored && (
+                <label className="mt-3 flex items-start gap-2 text-xs text-yellow-300">
+                  <input type="checkbox" checked={tiesConfirmed} onChange={e => setTiesConfirmed(e.target.checked)} className="mt-0.5" />
+                  Highlighted players are tied on both differential and games won. Order them with ▲▼, then confirm this order.
+                </label>
+              )}
+              <button
+                type="button"
+                onClick={handleGenerateFinals}
+                disabled={busy || !allRegularScored || (hasTies && !tiesConfirmed)}
+                className="mt-4 w-full py-3.5 rounded-lg text-sm font-bold text-white disabled:opacity-40"
+                style={{ backgroundColor: '#ff6b35' }}
+              >
+                {busy ? '...' : `Generate Finals (Round ${finalRound})`}
+              </button>
+              {!allRegularScored && (
+                <p className="mt-2 text-xs text-white/60 text-center">
+                  Enter all {regularExpected} regular-round scores first.
+                </p>
+              )}
+            </section>
+          )}
+
+          {!openMode && tournament.status === 'active' && currentRound && (
             <section className="mb-8">
               <h2 className="text-sm font-semibold text-white mb-3">
                 Round {currentRound.round_number} — Matches
@@ -388,87 +619,7 @@ export default function AmericanoManager({ eventId, eventFormat, eventTime, onBa
                 <p className="text-xs text-white/60">No matches for this round yet.</p>
               ) : (
                 <div className="space-y-3">
-                  {currentMatches.map(m => {
-                    const input = scoreInputs[m.id] ?? { t1: '', t2: '' }
-                    const scored = m.team1_score !== null && m.team2_score !== null
-                    return (
-                      <div
-                        key={m.id}
-                        className="rounded-xl p-4"
-                        style={{
-                          backgroundColor: '#0f2318',
-                          border: `1px solid ${scored ? '#ff6b35' : '#2d5a40'}`,
-                        }}
-                      >
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: '#ff6b35' }}>
-                            Court {m.court_number}
-                          </p>
-                          {scored && (
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-green-300">
-                              Saved
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-white leading-snug">{nameOf(m.team1_player1)}</p>
-                            <p className="text-sm font-semibold text-white leading-snug">{nameOf(m.team1_player2)}</p>
-                          </div>
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            min="0"
-                            value={input.t1}
-                            onChange={e =>
-                              setScoreInputs(prev => ({
-                                ...prev,
-                                [m.id]: { ...input, t1: e.target.value },
-                              }))
-                            }
-                            className="w-14 text-center text-lg font-bold rounded py-2 outline-none text-white"
-                            style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
-                          />
-                          <span className="text-white/50">:</span>
-                          <input
-                            type="number"
-                            inputMode="numeric"
-                            min="0"
-                            value={input.t2}
-                            onChange={e =>
-                              setScoreInputs(prev => ({
-                                ...prev,
-                                [m.id]: { ...input, t2: e.target.value },
-                              }))
-                            }
-                            className="w-14 text-center text-lg font-bold rounded py-2 outline-none text-white"
-                            style={{ backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }}
-                          />
-                          <div className="flex-1 text-right">
-                            <p className="text-sm font-semibold text-white leading-snug">{nameOf(m.team2_player1)}</p>
-                            <p className="text-sm font-semibold text-white leading-snug">{nameOf(m.team2_player2)}</p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleSaveScore(m.id)}
-                          className="mt-3 w-full py-2 rounded text-xs font-semibold text-white"
-                          style={{
-                            backgroundColor: savedMatchId === m.id ? '#16a34a' : '#1a3d2e',
-                            border: '1px solid #2d5a40',
-                          }}
-                        >
-                          {busyMatchId === m.id
-                            ? 'Saving...'
-                            : savedMatchId === m.id
-                            ? '✓ Saved!'
-                            : scored
-                            ? 'Update Score'
-                            : 'Save Score'}
-                        </button>
-                      </div>
-                    )
-                  })}
+                  {currentMatches.map(renderScoreCard)}
                 </div>
               )}
               <button
@@ -494,7 +645,8 @@ export default function AmericanoManager({ eventId, eventFormat, eventTime, onBa
             </section>
           )}
 
-          <section className="mb-8">
+          {/* In open mode the Finals Seeding table above is the live ranking */}
+          {!openMode && <section className="mb-8">
             <h2 className="text-sm font-semibold text-white mb-3">
               {tournament.status === 'finished' ? 'Final Standings' : 'Live Rankings'}
             </h2>
@@ -530,7 +682,7 @@ export default function AmericanoManager({ eventId, eventFormat, eventTime, onBa
                 </tbody>
               </table>
             </div>
-          </section>
+          </section>}
 
           <section className="mb-8">
             <h2 className="text-sm font-semibold text-white mb-3">Full Fixture</h2>

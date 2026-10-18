@@ -10,6 +10,8 @@ export type AmericanoFormat = {
   regularRoundMinutes: number
   finalsMinutes: number
   showSchedule: boolean
+  // All regular rounds are open for scoring at once; finals generated on demand.
+  allRoundsAtOnce: boolean
 }
 
 export const AMERICANO_FORMATS: Record<string, AmericanoFormat> = {
@@ -21,6 +23,7 @@ export const AMERICANO_FORMATS: Record<string, AmericanoFormat> = {
     regularRoundMinutes: 20,
     finalsMinutes: 30,
     showSchedule: false,
+    allRoundsAtOnce: false,
   },
   'Americano 120': {
     name: 'Americano 120',
@@ -29,6 +32,7 @@ export const AMERICANO_FORMATS: Record<string, AmericanoFormat> = {
     regularRoundMinutes: 20,
     finalsMinutes: 30,
     showSchedule: true,
+    allRoundsAtOnce: true,
   },
 }
 
@@ -191,4 +195,77 @@ export function finalsPlacements<T>(match: ScoredMatch<T>) {
     ...winners.map(player => ({ player, bonus: bonus.winner, rank: winnerRank })),
     ...losers.map(player => ({ player, bonus: bonus.loser, rank: loserRank })),
   ]
+}
+
+type StandingsMatch = {
+  team1_player1: string
+  team1_player2: string
+  team2_player1: string
+  team2_player2: string
+  team1_score: number | null
+  team2_score: number | null
+}
+
+export type Standing = {
+  id: string
+  name: string
+  diff: number     // sum of (own games - opponent games)
+  gamesWon: number // sum of own games
+  played: number
+  rank: number
+  tieGroup: number | null // players with equal diff AND gamesWon share a group
+}
+
+// Standings from the regular-round matches only. Computed from scores every time,
+// so editing a score can never double-count anything.
+export function regularStandings(
+  players: { id: string; name: string }[],
+  regularMatches: StandingsMatch[]
+): Standing[] {
+  const acc = new Map(players.map(p => [p.id, { diff: 0, gamesWon: 0, played: 0 }]))
+  for (const m of regularMatches) {
+    if (m.team1_score == null || m.team2_score == null) continue
+    const sides: [string[], number, number][] = [
+      [[m.team1_player1, m.team1_player2], m.team1_score, m.team2_score],
+      [[m.team2_player1, m.team2_player2], m.team2_score, m.team1_score],
+    ]
+    for (const [ids, own, opp] of sides) {
+      for (const id of ids) {
+        const a = acc.get(id)
+        if (!a) continue
+        a.diff += own - opp
+        a.gamesWon += own
+        a.played += 1
+      }
+    }
+  }
+  const rows = players
+    .map(p => ({ id: p.id, name: p.name, ...acc.get(p.id)! }))
+    .sort((a, b) => b.diff - a.diff || b.gamesWon - a.gamesWon || a.name.localeCompare(b.name))
+
+  let group = 0
+  return rows.map((r, i) => {
+    const tiedPrev = i > 0 && rows[i - 1].diff === r.diff && rows[i - 1].gamesWon === r.gamesWon
+    const tiedNext = i < rows.length - 1 && rows[i + 1].diff === r.diff && rows[i + 1].gamesWon === r.gamesWon
+    if (tiedPrev || tiedNext) {
+      if (!tiedPrev) group++
+      return { ...r, rank: i + 1, tieGroup: group }
+    }
+    return { ...r, rank: i + 1, tieGroup: null }
+  })
+}
+
+// A finals seeding order is valid when it contains every player once and only
+// reorders players that are tied on both diff and gamesWon.
+export function isValidSeeding(standings: Standing[], orderIds: string[]): boolean {
+  if (orderIds.length !== standings.length || new Set(orderIds).size !== orderIds.length) return false
+  const byId = new Map(standings.map(s => [s.id, s]))
+  for (let i = 0; i < orderIds.length; i++) {
+    const cur = byId.get(orderIds[i])
+    if (!cur) return false
+    if (i === 0) continue
+    const prev = byId.get(orderIds[i - 1])!
+    if (cur.diff > prev.diff || (cur.diff === prev.diff && cur.gamesWon > prev.gamesWon)) return false
+  }
+  return true
 }
