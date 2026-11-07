@@ -80,7 +80,14 @@ export function americanoSchedule(f: AmericanoFormat, startTime?: string | null)
     slots.push({ kind: 'round', label: `Round ${r}`, minutes: f.regularRoundMinutes })
   }
   slots.push({ kind: 'finals', label: `Round ${f.regularRounds + 1} · Finals`, minutes: f.finalsMinutes })
+  return withClockTimes(slots, startTime)
+}
 
+// Lays consecutive slots out from a start time ("18:30" or "18.30"); null times if unparseable.
+export function withClockTimes(
+  slots: Omit<ScheduleSlot, 'start' | 'end'>[],
+  startTime?: string | null
+): ScheduleSlot[] {
   let clock = parseClock(startTime)
   return slots.map(s => {
     if (clock === null) return { ...s, start: null, end: null }

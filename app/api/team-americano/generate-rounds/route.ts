@@ -1,22 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminGuard } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import { type RequiredMatchup, finalMatchesOf, generateGroupRounds, missingGroupRounds } from '@/lib/team-americano'
-import { loadTAEvent, parseCourts, readJson } from '@/lib/team-americano-server'
-
-function parseRequired(value: unknown): RequiredMatchup[] | null {
-  if (value === undefined) return []
-  if (!Array.isArray(value)) return null
-  const out: RequiredMatchup[] = []
-  for (const item of value as unknown[]) {
-    if (typeof item !== 'object' || item === null) return null
-    const { team1_id, team2_id, round } = item as Record<string, unknown>
-    if (typeof team1_id !== 'string' || typeof team2_id !== 'string') return null
-    if (round !== null && round !== undefined && (typeof round !== 'number' || !Number.isInteger(round))) return null
-    out.push({ team1_id, team2_id, round: typeof round === 'number' ? round : null })
-  }
-  return out
-}
+import { finalMatchesOf, generateGroupRounds, missingGroupRounds } from '@/lib/team-americano'
+import { loadTAEvent, parseCourts, parseRequired, readJson } from '@/lib/team-americano-server'
 
 // Generates every missing group round at once ("Start Tournament" / "Generate Remaining Rounds").
 // Existing rounds are never modified.
@@ -40,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   const state = await loadTAEvent(eventId)
   if ('error' in state) return NextResponse.json({ error: state.error }, { status: state.status })
-  const { teamIds, matches } = state
+  const { format, teamIds, matches } = state
 
   if (teamIds.length < 2) {
     return NextResponse.json({ error: `Need at least 2 approved teams (found ${teamIds.length}).` }, { status: 400 })
@@ -57,7 +43,7 @@ export async function POST(req: NextRequest) {
   }
   // Server-side guard: reject if any target round already exists (e.g. a double tap or a
   // second admin phone), or if the set of missing rounds changed since the page loaded.
-  const missing = missingGroupRounds(matches)
+  const missing = missingGroupRounds(matches, format.groupRounds)
   const alreadyThere = (targetRounds as number[]).filter(r => !missing.includes(r))
   if (alreadyThere.length > 0 || missing.length !== targetRounds.length) {
     const which = alreadyThere.length > 0 ? alreadyThere.map(r => `Round ${r}`).join(', ') + ' already exists' : 'The rounds changed'
@@ -67,7 +53,7 @@ export async function POST(req: NextRequest) {
   const { data: teamRows } = await supabaseAdmin.from('team_registrations').select('id, team_name').in('id', teamIds)
   const names = new Map((teamRows ?? []).map(t => [t.id as string, t.team_name as string]))
 
-  const result = generateGroupRounds(teamIds, matches, required, id => names.get(id) ?? 'Unknown team')
+  const result = generateGroupRounds(teamIds, matches, required, id => names.get(id) ?? 'Unknown team', format.groupRounds)
   if ('error' in result) return NextResponse.json({ error: result.error }, { status: 400 })
 
   const rows = result.rounds.flatMap(r =>

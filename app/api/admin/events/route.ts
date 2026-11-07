@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminGuard } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { FORMAT_LOCKED_MESSAGE, taFormatLocked } from '@/lib/team-americano-server'
 
 type EventInput = {
   name: string
@@ -74,6 +75,12 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'Missing id.' }, { status: 400 })
   }
   const payload = sanitizeEvent(body.event)
+  if (payload.format !== undefined) {
+    const { data: current } = await supabaseAdmin.from('events').select('format').eq('id', body.id).maybeSingle()
+    if (current && (await taFormatLocked(body.id, current.format, payload.format))) {
+      return NextResponse.json({ error: FORMAT_LOCKED_MESSAGE }, { status: 409 })
+    }
+  }
   const { data, error } = await supabaseAdmin
     .from('events')
     .update(payload)

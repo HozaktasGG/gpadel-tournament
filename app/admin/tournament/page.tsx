@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase-client'
 import AmericanoManager from './americano-manager'
 import TeamManager from './team-manager'
 import TeamAmericanoManager from './team-americano-manager'
+import { isTeamAmericano, taStructureLabel, teamAmericanoFormat } from '@/lib/team-americano'
 
 type EventRow = {
   id: string
@@ -40,12 +41,14 @@ export default function AdminTournamentPage() {
   }, [supabase])
 
   if (selected) {
-    if (selected.format === 'Team Americano') {
+    if (isTeamAmericano(selected.format)) {
       return (
         <main className="min-h-screen p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
           <TeamAmericanoManager
             eventId={selected.id}
             eventName={selected.name}
+            eventFormat={selected.format}
+            eventTime={selected.time}
             onBack={() => setSelected(null)}
           />
         </main>
@@ -96,13 +99,13 @@ export default function AdminTournamentPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {events.map(ev => {
               const isTeam = ev.format === 'Team'
-              const isTeamAmericano = ev.format === 'Team Americano'
-              const badgeStyle = isTeamAmericano
+              const isTA = isTeamAmericano(ev.format)
+              const badgeStyle = isTA
                 ? { backgroundColor: 'rgba(34,197,94,0.15)', color: '#4ade80' }
                 : isTeam
                 ? { backgroundColor: 'rgba(255,107,53,0.15)', color: '#ff6b35' }
                 : { backgroundColor: 'rgba(59,130,246,0.15)', color: '#3b82f6' }
-              const badgeLabel = isTeamAmericano ? 'Team Americano' : isTeam ? 'Team' : ev.format === 'Americano 120' ? 'Americano 120' : 'Americano'
+              const badgeLabel = isTA ? 'Team Americano' : isTeam ? 'Team' : ev.format === 'Americano 120' ? 'Americano 120' : 'Americano'
               return (
                 <div
                   key={ev.id}
@@ -119,6 +122,7 @@ export default function AdminTournamentPage() {
                     </span>
                   </div>
                   <p className="text-xs text-white/60 mb-1">📅 {ev.date}{ev.time ? ` · ${ev.time}` : ''}</p>
+                  {isTA && <p className="text-xs text-white/60 mb-1">⏱ {taStructureLabel(teamAmericanoFormat(ev.format))}</p>}
                   {ev.location && <p className="text-xs text-white/60 mb-3">📍 {ev.location}</p>}
                   <button
                     type="button"

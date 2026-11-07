@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
-import type { LiveState, TAMatch } from '@/lib/team-americano'
-import { MATCH_COLUMNS, TA_FORMAT } from '@/lib/team-americano-server'
+import { type LiveState, type TAMatch, TEAM_AMERICANO_FORMAT_NAMES } from '@/lib/team-americano'
+import { MATCH_COLUMNS } from '@/lib/team-americano-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,16 +21,16 @@ export async function GET(req: NextRequest) {
   if (requested) {
     const { data } = await supabaseAdmin
       .from('events')
-      .select('id, name, date')
+      .select('id, name, date, time, format')
       .eq('id', requested)
-      .eq('format', TA_FORMAT)
+      .in('format', TEAM_AMERICANO_FORMAT_NAMES)
       .maybeSingle<EventRow>()
     event = data
   } else {
     const { data: candidates } = await supabaseAdmin
       .from('events')
-      .select('id, name, date')
-      .eq('format', TA_FORMAT)
+      .select('id, name, date, time, format')
+      .in('format', TEAM_AMERICANO_FORMAT_NAMES)
       .in('status', ['upcoming', 'active'])
       .order('date', { ascending: false })
     for (const ev of (candidates ?? []) as EventRow[]) {

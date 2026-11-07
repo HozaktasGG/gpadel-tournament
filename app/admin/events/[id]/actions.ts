@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { Resend } from 'resend'
 import { requireAdmin } from '@/lib/admin-auth'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { FORMAT_LOCKED_MESSAGE, taFormatLocked } from '@/lib/team-americano-server'
 
 export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string }
 
@@ -170,6 +171,9 @@ export async function updateEvent(eventId: string, input: EventUpdateInput) {
     if (maxPlayers !== null && (maxPlayers < 0 || !Number.isInteger(maxPlayers))) fail('Max players must be a whole number.')
     const entryFee = num(input.entry_fee)
     if (entryFee !== null && entryFee < 0) fail('Entry fee cannot be negative.')
+
+    const { data: current } = await supabaseAdmin.from('events').select('format').eq('id', eventId).maybeSingle()
+    if (current && (await taFormatLocked(eventId, current.format, str(input.format)))) fail(FORMAT_LOCKED_MESSAGE)
 
     const { error } = await supabaseAdmin
       .from('events')

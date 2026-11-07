@@ -1,3 +1,5 @@
+import { TEAM_AMERICANO_FORMAT_NAMES } from '@/lib/team-americano'
+
 export type AdminEvent = {
   id: string
   name: string
@@ -40,7 +42,7 @@ export type AdminProfile = {
   avatar_url: string | null
 }
 
-export const TEAM_FORMATS = ['Team', 'Team Americano']
+export const TEAM_FORMATS = ['Team', ...TEAM_AMERICANO_FORMAT_NAMES]
 
 export function isTeamFormat(format: string | null | undefined) {
   return !!format && TEAM_FORMATS.includes(format)

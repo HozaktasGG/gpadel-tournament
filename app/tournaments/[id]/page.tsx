@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
 import RegisterButton from './register-button'
 import TeamRegisterSection from './team-register-section'
-import AmericanoSchedule from '@/components/AmericanoSchedule'
+import AmericanoSchedule, { ScheduleCard } from '@/components/AmericanoSchedule'
+import { isTeamAmericano, taStructureLabel, teamAmericanoFormat, teamAmericanoSchedule } from '@/lib/team-americano'
 import { AMERICANO_FORMATS, FINALS_BONUS } from '@/lib/americano-format'
 
 type EventRow = {
@@ -161,7 +162,8 @@ export default async function TournamentDetailPage({
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isTeamFormat = ev.format === 'Team' || ev.format === 'Team Americano'
+  const isTeamFormat = ev.format === 'Team' || isTeamAmericano(ev.format)
+  const teamAmericano = isTeamAmericano(ev.format) ? teamAmericanoFormat(ev.format) : null
   const americano = ev.format ? AMERICANO_FORMATS[ev.format] : undefined
   const registrationOpen = ev.registration_open !== false
 
@@ -436,6 +438,15 @@ export default async function TournamentDetailPage({
           {americano?.showSchedule && (
             <div className="px-6 sm:px-8 py-5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
               <AmericanoSchedule format={americano} startTime={ev.time} />
+            </div>
+          )}
+
+          {teamAmericano && (
+            <div className="px-6 sm:px-8 py-5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <ScheduleCard slots={teamAmericanoSchedule(teamAmericano, ev.time)} summary={taStructureLabel(teamAmericano)} />
+              <a href={`/tournament?event=${ev.id}`} className="mt-3 block text-center text-sm font-semibold underline" style={{ color: '#ff6b35' }}>
+                Live fixtures &amp; standings →
+              </a>
             </div>
           )}
 

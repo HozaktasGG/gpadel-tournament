@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase-client'
+import { ScheduleCard } from '@/components/AmericanoSchedule'
+import TeamAmericanoStandings, { STANDINGS_RULE } from '@/components/TeamAmericanoStandings'
 import {
   DEFAULT_COURTS,
-  FINALS_MINUTES,
-  GROUP_ROUNDS,
-  GROUP_ROUND_MINUTES,
+  FINALS_DRAW_MESSAGE,
   type RequiredMatchup,
   type TAMatch,
   byeTeamsByRound,
@@ -14,12 +14,16 @@ import {
   finalLabel,
   finalMatchesOf,
   finalRanking,
+  finalsDecision,
   groupMatchesOf,
   isScored,
   missingGroupRounds,
   ordinal,
   roundMatches,
-  signed,
+  slotLabel,
+  taStructureLabel,
+  teamAmericanoFormat,
+  teamAmericanoSchedule,
 } from '@/lib/team-americano'
 
 type Team = {
@@ -39,15 +43,20 @@ type Draft = { t1: string; t2: string }
 type Props = {
   eventId: string
   eventName: string
+  eventFormat: string | null
+  eventTime: string | null
   onBack: () => void
 }
+type PostResult = { error?: string; rounds?: number[]; finals?: string; finalsError?: string; needsDecision?: boolean }
 
 const CARD = { backgroundColor: '#0f2318', border: '1px solid #2d5a40' }
 const INPUT = { backgroundColor: '#1a3d2e', border: '1px solid #2d5a40' }
 const ORANGE = '#ff6b35'
 
-export default function TeamAmericanoManager({ eventId, eventName, onBack }: Props) {
+export default function TeamAmericanoManager({ eventId, eventName, eventFormat, eventTime, onBack }: Props) {
   const supabase = useMemo(() => createClient(), [])
+  const format = teamAmericanoFormat(eventFormat)
+  const slots = teamAmericanoSchedule(format, eventTime)
 
   const [teams, setTeams] = useState<Team[]>([])
   const [players, setPlayers] = useState<Player[]>([])
@@ -57,7 +66,9 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
   const [loaded, setLoaded] = useState(false)
   const [busy, setBusy] = useState(false)
   const [busyMatchId, setBusyMatchId] = useState('')
-  const [generating, setGenerating] = useState<'rounds' | 'finals' | null>(null)
+  const [generating, setGenerating] = useState<'rounds' | 'regen' | 'finals' | null>(null)
+  // Admin-chosen seeding when a tie was decided by the random draw (null = use the draw).
+  const [tieOrder, setTieOrder] = useState<string[] | null>(null)
   // Set synchronously so a double tap can't fire a second request before React re-renders.
   const inFlight = useRef(false)
   const [error, setError] = useState('')
@@ -140,16 +151,28 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
 
   const finals = finalMatchesOf(matches)
   const groupMatches = groupMatchesOf(matches)
-  const missing = missingGroupRounds(matches)
-  const existingRounds = Array.from({ length: GROUP_ROUNDS }, (_, i) => i + 1).filter(r => !missing.includes(r))
+  const missing = missingGroupRounds(matches, format.groupRounds)
+  const existingRounds = Array.from({ length: format.groupRounds }, (_, i) => i + 1).filter(r => !missing.includes(r))
   const groupComplete = missing.length === 0 && groupMatches.every(isScored)
   const standings = computeStandings(eventId, teamIds, matches)
+  const decision = finalsDecision(eventId, teamIds, matches, format.groupRounds)
+  const canRegenerate = groupMatches.length > 0 && finals.length === 0 && !groupMatches.some(isScored)
+  // Seeding shown in the tie card: the admin's order if it still has the same teams, else the draw.
+  const drawOrder = standings.map(s => s.team_id)
+  const seeding =
+    decision.status === 'needs-decision' &&
+    tieOrder !== null &&
+    tieOrder.length === drawOrder.length &&
+    tieOrder.every(id => drawOrder.includes(id))
+      ? tieOrder
+      : drawOrder
+  const seedingIsDraw = seeding.every((id, i) => id === drawOrder[i])
   const ranking = finalRanking(teamIds, matches)
   const byes = byeTeamsByRound(teamIds, matches)
   const matchesPerRound = Math.floor(teams.length / 2)
   const notEnoughCourts = matchesPerRound > courts
 
-  const post = async (url: string, body: object): Promise<boolean> => {
+  const post = async (url: string, body: object): Promise<PostResult | null> => {
     setError('')
     try {
       const res = await fetch(url, {
@@ -157,21 +180,21 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const data = (await res.json()) as { error?: string; rounds?: number[] }
+      const data = (await res.json()) as PostResult
       if (!res.ok) {
         setError(data.error ?? `Request failed (${res.status}).`)
-        return false
+        return null
       }
       if (data.rounds?.length) setNotice(`Generated ${data.rounds.map(r => `Round ${r}`).join(', ')}.`)
-      return true
+      return data
     } catch (err) {
       setError('Network error: ' + (err instanceof Error ? err.message : String(err)))
-      return false
+      return null
     }
   }
 
   // Draws every missing group round at once; existing rounds are left as they are.
-  const generate = async (kind: 'rounds' | 'finals', run: () => Promise<void>) => {
+  const generate = async (kind: 'rounds' | 'regen' | 'finals', run: () => Promise<void>) => {
     if (inFlight.current) return
     inFlight.current = true
     setGenerating(kind)
@@ -210,11 +233,34 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
     setReqRound('')
   }
 
-  const handleGenerateFinals = async () => {
-    if (inFlight.current || !confirm('Generate the finals from the current standings?')) return
-    await generate('finals', async () => {
-      if (await post('/api/team-americano/generate-finals', { eventId, courts })) await loadAll()
+  const handleRegenerate = async () => {
+    if (inFlight.current || !confirm('Throw away the current rounds and draw new ones?')) return
+    await generate('regen', async () => {
+      if (await post('/api/team-americano/regenerate-rounds', { eventId, courts, required })) {
+        setRequired([])
+        await loadAll()
+      }
     })
+  }
+
+  // `order` is sent only when the admin settles a tie that came from the random draw.
+  const handleGenerateFinals = async (order?: string[]) => {
+    const prompt = order ? 'Generate the finals with this order?' : 'Generate the finals from the current standings?'
+    if (inFlight.current || !confirm(prompt)) return
+    await generate('finals', async () => {
+      if (await post('/api/team-americano/generate-finals', { eventId, courts, ...(order ? { order } : {}) })) {
+        setTieOrder(null)
+        setNotice('Finals generated.')
+      }
+      await loadAll()
+    })
+  }
+
+  // Swap a team with its neighbour inside a tie block.
+  const moveInTie = (pos: number, dir: -1 | 1) => {
+    const next = [...seeding]
+    ;[next[pos], next[pos + dir]] = [next[pos + dir], next[pos]]
+    setTieOrder(next)
   }
 
   const handleSave = async (m: TAMatch) => {
@@ -230,11 +276,15 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
       return
     }
     if (m.phase === 'final' && t1 === t2) {
-      setError('Finals need a winner — draws are not allowed.')
+      setError(FINALS_DRAW_MESSAGE)
       return
     }
     setBusyMatchId(m.id)
-    if (await post('/api/team-americano/save-match', { matchId: m.id, team1Score: t1, team2Score: t2 })) {
+    const res = await post('/api/team-americano/save-match', { matchId: m.id, team1Score: t1, team2Score: t2 })
+    if (res) {
+      if (res.finals === 'generated') setNotice('All group matches saved — finals generated automatically.')
+      if (res.finals === 'needs-decision') setNotice('All group matches saved — teams are tied, confirm the finals order below.')
+      if (res.finals === 'error') setError('Score saved, but the finals could not be generated: ' + res.finalsError)
       setDrafts(prev => {
         const next = { ...prev }
         delete next[m.id]
@@ -251,6 +301,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
     setNotice('')
     if (await post('/api/team-tournament/reset', { eventId })) {
       setDrafts({})
+      setTieOrder(null)
       await loadAll()
     }
     setBusy(false)
@@ -284,7 +335,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
     </select>
   )
 
-  const renderMatchCard = (m: TAMatch, title: string, minutes: number) => {
+  const renderMatchCard = (m: TAMatch, title: string, slot: string) => {
     const draft = drafts[m.id] ?? draftFrom(m)
     const scored = isScored(m)
     const dirty = drafts[m.id] !== undefined
@@ -297,14 +348,14 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
         className="rounded-xl p-4"
         style={{ ...CARD, borderColor: isFinal ? ORANGE : scored && !dirty ? '#16a34a' : '#2d5a40' }}
       >
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-bold uppercase tracking-wider" style={{ color: ORANGE }}>
+        <div className="flex items-center justify-between gap-2 mb-3">
+          <p className="text-xs font-bold uppercase tracking-wider shrink-0" style={{ color: ORANGE }}>
             {isFinal ? '🏆 ' : ''}
             {title}
           </p>
-          <span className="text-[10px] uppercase tracking-widest text-white/60">
+          <span className="text-[10px] uppercase tracking-wider text-white/60 tabular-nums text-right">
             {scored && !dirty ? '✓ Saved · ' : ''}
-            {minutes} min
+            {slot}
           </span>
         </div>
         <div className="space-y-2">
@@ -371,9 +422,12 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
       <div className="mb-5 rounded-xl p-4" style={CARD}>
         <p className="text-[11px] tracking-[0.25em] uppercase text-white/60">Team Americano</p>
         <p className="text-xl font-bold mt-1 text-white">{eventName}</p>
+        <p className="text-sm font-semibold mt-1" style={{ color: ORANGE }}>
+          {taStructureLabel(format)}
+        </p>
         <p className="text-xs text-white/60 mt-1">
-          {teams.length} approved team{teams.length === 1 ? '' : 's'} · {GROUP_ROUNDS} rounds × {GROUP_ROUND_MINUTES}{' '}
-          min + finals {FINALS_MINUTES} min
+          {teams.length} approved team{teams.length === 1 ? '' : 's'}
+          {started ? ' · format locked while rounds exist' : ''}
         </p>
         <label className="mt-3 flex items-center justify-between gap-3">
           <span className="text-sm text-white/80">Courts</span>
@@ -449,11 +503,12 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
       </details>
 
       {/* GENERATE GROUP ROUNDS (all at once; existing rounds are kept) */}
-      {missing.length > 0 && finals.length === 0 && teams.length >= 2 && (
+      {(missing.length > 0 || canRegenerate) && finals.length === 0 && teams.length >= 2 && (
         <section className="mb-6 rounded-xl p-4" style={CARD}>
           <h2 className="text-sm font-bold text-white">Required matchups</h2>
           <p className="text-[11px] text-white/50 mb-3">
-            Optional. Each pair is placed in the chosen round, or in any of {missing.map(r => `Round ${r}`).join(' / ')}.
+            Optional. Each pair is placed in the chosen round, or in any of{' '}
+            {(missing.length > 0 ? missing : existingRounds).map(r => `Round ${r}`).join(' / ')}.
           </p>
           <div className="grid grid-cols-1 gap-2">
             {teamSelect('Team A', reqA, setReqA, reqB)}
@@ -467,7 +522,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
                 style={INPUT}
               >
                 <option value="">Any remaining round</option>
-                {missing.map(r => (
+                {(missing.length > 0 ? missing : existingRounds).map(r => (
                   <option key={r} value={r}>
                     Round {r}
                   </option>
@@ -507,25 +562,49 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
               ))}
             </ul>
           )}
-          <button
-            type="button"
-            onClick={handleGenerateRounds}
-            disabled={busy || generating !== null || notEnoughCourts}
-            aria-busy={generating === 'rounds'}
-            className="mt-4 w-full h-14 rounded-xl text-lg font-extrabold text-white disabled:opacity-50 shadow-lg flex items-center justify-center gap-2"
-            style={{ backgroundColor: ORANGE }}
-          >
-            {generating === 'rounds' ? (
-              <>
-                <Spinner /> Generating…
-              </>
-            ) : started
-              ? `Generate Remaining Rounds (${missing.join(', ')})`
-              : 'Start Tournament'}
-          </button>
-          {!started && (
-            <p className="text-[11px] text-white/50 mt-2 text-center">Draws all {GROUP_ROUNDS} group rounds at once.</p>
+          {missing.length > 0 && (
+            <button
+              type="button"
+              onClick={handleGenerateRounds}
+              disabled={busy || generating !== null || notEnoughCourts}
+              aria-busy={generating === 'rounds'}
+              className="mt-4 w-full h-14 rounded-xl text-lg font-extrabold text-white disabled:opacity-50 shadow-lg flex items-center justify-center gap-2"
+              style={{ backgroundColor: ORANGE }}
+            >
+              {generating === 'rounds' ? (
+                <>
+                  <Spinner /> Generating…
+                </>
+              ) : started ? (
+                `Generate Remaining Rounds (${missing.join(', ')})`
+              ) : (
+                'Generate Rounds'
+              )}
+            </button>
           )}
+          {canRegenerate && (
+            <button
+              type="button"
+              onClick={handleRegenerate}
+              disabled={busy || generating !== null || notEnoughCourts}
+              aria-busy={generating === 'regen'}
+              className="mt-3 w-full h-12 rounded-xl text-sm font-bold text-white disabled:opacity-50 flex items-center justify-center gap-2"
+              style={{ backgroundColor: '#1a3d2e', border: `1px solid ${ORANGE}` }}
+            >
+              {generating === 'regen' ? (
+                <>
+                  <Spinner /> Regenerating…
+                </>
+              ) : (
+                '↻ Regenerate rounds'
+              )}
+            </button>
+          )}
+          <p className="text-[11px] text-white/50 mt-2 text-center">
+            {!started
+              ? `Draws all ${format.groupRounds} group rounds at once — no opponent repeats.`
+              : 'Rounds can be regenerated until the first score is saved.'}
+          </p>
         </section>
       )}
 
@@ -535,7 +614,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
           <h2 className="text-base font-bold text-white mb-3">Finals</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {finals.map(m =>
-              renderMatchCard(m, `${finalLabel(m.match_order ?? 1)} · Court ${m.match_order ?? '?'}`, FINALS_MINUTES)
+              renderMatchCard(m, `${finalLabel(m.match_order ?? 1)} · Court ${m.match_order ?? '?'}`, slotLabel(slots, 'finals'))
             )}
           </div>
         </section>
@@ -577,7 +656,7 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
           <section key={r} className="mb-6">
             <div className="flex items-baseline justify-between mb-3">
               <h2 className="text-base font-bold text-white">
-                Round {r} <span className="text-white/50 font-normal">of {GROUP_ROUNDS}</span>
+                Round {r} <span className="text-white/50 font-normal">of {format.groupRounds}</span>
               </h2>
               <span className="text-xs text-white/60">
                 {rm.filter(isScored).length}/{rm.length} saved
@@ -589,16 +668,81 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
               </p>
             ))}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {rm.map(m => renderMatchCard(m, `Court ${m.match_order ?? '?'}`, GROUP_ROUND_MINUTES))}
+              {rm.map(m => renderMatchCard(m, `Court ${m.match_order ?? '?'}`, slotLabel(slots, 'round', r)))}
             </div>
           </section>
         )
       })}
 
-      {missing.length === 0 && finals.length === 0 && (
+      {decision.status === 'needs-decision' && (
+        <section className="mb-6 rounded-xl p-4" style={{ ...CARD, borderColor: '#eab308' }}>
+          <h2 className="text-sm font-bold text-yellow-200">Tie needs a decision</h2>
+          <p className="text-[11px] text-white/60 mt-1 mb-3">
+            These teams are level on wins, game difference, games won and head-to-head, so the finals were not
+            generated automatically. The order below is the random draw — reorder if needed, then generate the finals.
+          </p>
+          {decision.ties.map(t => (
+            <ul key={t.start} className="mb-3 space-y-2">
+              {seeding.slice(t.start, t.end + 1).map((id, k) => {
+                const pos = t.start + k
+                return (
+                  <li
+                    key={id}
+                    className="flex items-center gap-1 rounded-lg pl-3 text-sm text-white"
+                    style={{ backgroundColor: '#1a3d2e' }}
+                  >
+                    <span className="w-8 shrink-0 font-bold" style={{ color: ORANGE }}>
+                      #{pos + 1}
+                    </span>
+                    <span className="flex-1 min-w-0 truncate font-semibold">{teamLabel(id)}</span>
+                    <button
+                      type="button"
+                      onClick={() => moveInTie(pos, -1)}
+                      disabled={pos === t.start}
+                      className="w-11 h-11 shrink-0 text-white/80 disabled:opacity-20"
+                      aria-label={`Move ${teamLabel(id)} up`}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveInTie(pos, 1)}
+                      disabled={pos === t.end}
+                      className="w-11 h-11 shrink-0 text-white/80 disabled:opacity-20"
+                      aria-label={`Move ${teamLabel(id)} down`}
+                    >
+                      ▼
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          ))}
+          <button
+            type="button"
+            onClick={() => handleGenerateFinals(seeding)}
+            disabled={busy || generating !== null}
+            aria-busy={generating === 'finals'}
+            className="w-full h-14 rounded-xl text-base font-bold text-white disabled:opacity-40 flex items-center justify-center gap-2"
+            style={{ backgroundColor: ORANGE }}
+          >
+            {generating === 'finals' ? (
+              <>
+                <Spinner /> Generating…
+              </>
+            ) : seedingIsDraw ? (
+              '🏆 Accept random draw & generate finals'
+            ) : (
+              '🏆 Confirm order & generate finals'
+            )}
+          </button>
+        </section>
+      )}
+
+      {missing.length === 0 && finals.length === 0 && decision.status !== 'needs-decision' && (
         <button
           type="button"
-          onClick={handleGenerateFinals}
+          onClick={() => handleGenerateFinals()}
           disabled={busy || generating !== null || !groupComplete}
           aria-busy={generating === 'finals'}
           className="mb-6 w-full h-14 rounded-xl text-base font-bold text-white disabled:opacity-40 flex items-center justify-center gap-2"
@@ -610,50 +754,26 @@ export default function TeamAmericanoManager({ eventId, eventName, onBack }: Pro
             </>
           ) : groupComplete
             ? '🏆 Generate Finals'
-            : `Save every group match to unlock finals (${groupMatches.filter(isScored).length}/${groupMatches.length})`}
+            : `Finals are generated automatically after the last group score (${groupMatches.filter(isScored).length}/${groupMatches.length})`}
         </button>
       )}
 
-      {/* STANDINGS (rounds 1–3 only; finals scores are not added) */}
+      {/* STANDINGS (group rounds only; finals scores are never added) */}
       {started && (
         <section className="mb-6">
           <h2 className="text-base font-bold text-white mb-1">
-            {finals.length > 0 ? 'Group Standings (after Round 3)' : 'Live Standings'}
+            {finals.length > 0 ? `Group Standings (after Round ${format.groupRounds})` : 'Live Standings'}
           </h2>
-          <p className="text-[11px] text-white/50 mb-3">Game difference → games won → head-to-head → random</p>
+          <p className="text-[11px] text-white/50 mb-3">{STANDINGS_RULE}</p>
           <div className="rounded-xl overflow-hidden" style={{ border: '1px solid #2d5a40' }}>
-            <table className="w-full text-sm">
-              <thead style={{ backgroundColor: '#0f2318' }}>
-                <tr className="text-white/60 text-[11px] uppercase tracking-wider">
-                  <th className="py-2 px-3 text-left font-semibold">#</th>
-                  <th className="py-2 px-2 text-left font-semibold">Team</th>
-                  <th className="py-2 px-2 text-right font-semibold">Played</th>
-                  <th className="py-2 px-2 text-right font-semibold">Games Won</th>
-                  <th className="py-2 px-3 text-right font-semibold">+/-</th>
-                </tr>
-              </thead>
-              <tbody>
-                {standings.map((s, i) => (
-                  <tr key={s.team_id} style={{ borderTop: '1px solid #2d5a40', backgroundColor: '#0f2318' }}>
-                    <td className="py-2 px-3 font-bold text-white">{i + 1}</td>
-                    <td className="py-2 px-2 font-semibold text-white">
-                      <div className="truncate max-w-[140px] sm:max-w-none">{teamLabel(s.team_id)}</div>
-                    </td>
-                    <td className="py-2 px-2 text-right tabular-nums text-white/70">{s.played}</td>
-                    <td className="py-2 px-2 text-right tabular-nums text-white">{s.gamesWon}</td>
-                    <td
-                      className="py-2 px-3 text-right tabular-nums font-bold"
-                      style={{ color: s.diff > 0 ? '#4ade80' : s.diff < 0 ? '#f87171' : '#9ca3af' }}
-                    >
-                      {signed(s.diff)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <TeamAmericanoStandings standings={standings} teamName={teamLabel} rowBg="#0f2318" border="#2d5a40" />
           </div>
         </section>
       )}
+
+      <section className="mb-6">
+        <ScheduleCard slots={slots} summary={taStructureLabel(format)} />
+      </section>
 
     </div>
   )
