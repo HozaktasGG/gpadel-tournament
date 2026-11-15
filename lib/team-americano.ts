@@ -5,6 +5,7 @@
 // matches are finals — never round_number.
 
 import { type ScheduleSlot, withClockTimes } from './americano-format'
+import { LIGHTS_OUT_FORMATS, isLightsOut, loStructureLabel } from './lights-out'
 
 // ───────────────────────── Formats ─────────────────────────
 
@@ -40,7 +41,11 @@ export const taStructureLabel = (f: TeamAmericanoFormat): string =>
 
 // Dropdown label: "Team Americano 4x15 (90 min · 4×15 + Final 30)"; other formats unchanged.
 export const formatOptionLabel = (format: string): string =>
-  isTeamAmericano(format) ? `${format} (${taStructureLabel(TEAM_AMERICANO_FORMATS[format])})` : format
+  isTeamAmericano(format)
+    ? `${format} (${taStructureLabel(TEAM_AMERICANO_FORMATS[format])})`
+    : isLightsOut(format)
+    ? `${format} (${loStructureLabel(LIGHTS_OUT_FORMATS[format])})`
+    : format
 
 // Finals are stored with round_number = groupRounds + 1 (informational only).
 export const taFinalsRound = (f: TeamAmericanoFormat): number => f.groupRounds + 1

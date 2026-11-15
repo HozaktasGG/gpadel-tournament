@@ -9,6 +9,7 @@ import TeamsSection from './teams-section'
 import type { AdminEvent, AdminProfile, AdminRegistration, AdminTeam } from './types'
 import { fullName, isTeamFormat } from './types'
 import { TEAM_AMERICANO_FORMAT_NAMES, formatOptionLabel, isTeamAmericano } from '@/lib/team-americano'
+import { LIGHTS_OUT_FORMAT_NAMES, isLightsOut } from '@/lib/lights-out'
 import { Avatar, C, GhostButton, LevelBadge, PrimaryButton, Section, Sheet, inputCls, labelCls, useConfirm, useToasts } from './ui'
 
 export type AdminCtx = {
@@ -24,7 +25,7 @@ export type AdminCtx = {
   editProfile: (id: string) => void
 }
 
-const FORMATS = ['Americano', 'Americano 120', ...TEAM_AMERICANO_FORMAT_NAMES, 'Team', 'Round Robin', 'Elimination']
+const FORMATS = ['Americano', 'Americano 120', ...TEAM_AMERICANO_FORMAT_NAMES, ...LIGHTS_OUT_FORMAT_NAMES, 'Team', 'Round Robin', 'Elimination']
 const STATUSES = ['upcoming', 'active', 'completed']
 
 export default function EventAdmin({
@@ -243,7 +244,7 @@ function RegistrationToggle({ event, run, ask }: { event: AdminEvent; run: Admin
 
 function EventDetails({ event, run, hasFixtures }: { event: AdminEvent; run: AdminCtx['run']; hasFixtures: boolean }) {
   // Team Americano: the round structure can't change once rounds exist (also enforced server-side).
-  const formatLocked = hasFixtures && isTeamAmericano(event.format)
+  const formatLocked = hasFixtures && (isTeamAmericano(event.format) || isLightsOut(event.format))
   const [form, setForm] = useState<AdminEvent | null>(null)
   const [saving, setSaving] = useState(false)
 

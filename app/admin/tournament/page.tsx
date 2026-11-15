@@ -5,7 +5,9 @@ import { createClient } from '@/lib/supabase-client'
 import AmericanoManager from './americano-manager'
 import TeamManager from './team-manager'
 import TeamAmericanoManager from './team-americano-manager'
+import LightsOutManager from './lights-out-manager'
 import { isTeamAmericano, taStructureLabel, teamAmericanoFormat } from '@/lib/team-americano'
+import { isLightsOut, lightsOutFormat, loStructureLabel } from '@/lib/lights-out'
 
 type EventRow = {
   id: string
@@ -41,6 +43,20 @@ export default function AdminTournamentPage() {
   }, [supabase])
 
   if (selected) {
+    if (isLightsOut(selected.format)) {
+      return (
+        <main className="min-h-screen p-4 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
+          <LightsOutManager
+            eventId={selected.id}
+            eventName={selected.name}
+            eventFormat={selected.format}
+            eventTime={selected.time}
+            maxPlayers={selected.max_players}
+            onBack={() => setSelected(null)}
+          />
+        </main>
+      )
+    }
     if (isTeamAmericano(selected.format)) {
       return (
         <main className="min-h-screen p-6 sm:p-10" style={{ backgroundColor: '#1a3d2e' }}>
@@ -100,12 +116,15 @@ export default function AdminTournamentPage() {
             {events.map(ev => {
               const isTeam = ev.format === 'Team'
               const isTA = isTeamAmericano(ev.format)
-              const badgeStyle = isTA
+              const isLO = isLightsOut(ev.format)
+              const badgeStyle = isLO
+                ? { backgroundColor: 'rgba(250,204,21,0.15)', color: '#facc15' }
+                : isTA
                 ? { backgroundColor: 'rgba(34,197,94,0.15)', color: '#4ade80' }
                 : isTeam
                 ? { backgroundColor: 'rgba(255,107,53,0.15)', color: '#ff6b35' }
                 : { backgroundColor: 'rgba(59,130,246,0.15)', color: '#3b82f6' }
-              const badgeLabel = isTA ? 'Team Americano' : isTeam ? 'Team' : ev.format === 'Americano 120' ? 'Americano 120' : 'Americano'
+              const badgeLabel = isLO ? 'Lights Out' : isTA ? 'Team Americano' : isTeam ? 'Team' : ev.format === 'Americano 120' ? 'Americano 120' : 'Americano'
               return (
                 <div
                   key={ev.id}
@@ -123,6 +142,7 @@ export default function AdminTournamentPage() {
                   </div>
                   <p className="text-xs text-white/60 mb-1">📅 {ev.date}{ev.time ? ` · ${ev.time}` : ''}</p>
                   {isTA && <p className="text-xs text-white/60 mb-1">⏱ {taStructureLabel(teamAmericanoFormat(ev.format))}</p>}
+                  {isLO && <p className="text-xs text-white/60 mb-1">⏱ {loStructureLabel(lightsOutFormat(ev.format))}</p>}
                   {ev.location && <p className="text-xs text-white/60 mb-3">📍 {ev.location}</p>}
                   <button
                     type="button"

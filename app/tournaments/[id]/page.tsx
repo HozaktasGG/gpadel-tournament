@@ -6,6 +6,9 @@ import TeamRegisterSection from './team-register-section'
 import AmericanoSchedule, { ScheduleCard } from '@/components/AmericanoSchedule'
 import { isTeamAmericano, taStructureLabel, teamAmericanoFormat, teamAmericanoSchedule } from '@/lib/team-americano'
 import { AMERICANO_FORMATS, FINALS_BONUS } from '@/lib/americano-format'
+import { isLightsOut, lightsOutFormat, lightsOutSchedule, loStructureLabel } from '@/lib/lights-out'
+import { loadLightsOutPublic } from '@/lib/lights-out-server'
+import { LightsOutDraw, LightsOutRules, LightsOutStandings } from '@/components/LightsOutView'
 
 type EventRow = {
   id: string
@@ -162,7 +165,10 @@ export default async function TournamentDetailPage({
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isTeamFormat = ev.format === 'Team' || isTeamAmericano(ev.format)
+  const lightsOut = isLightsOut(ev.format) ? lightsOutFormat(ev.format) : null
+  const lightsOutState = lightsOut ? await loadLightsOutPublic(ev.id) : null
+  const lightsOutTeams = new Map((lightsOutState?.teams ?? []).map(t => [t.id, t]))
+  const isTeamFormat = ev.format === 'Team' || isTeamAmericano(ev.format) || !!lightsOut
   const teamAmericano = isTeamAmericano(ev.format) ? teamAmericanoFormat(ev.format) : null
   const americano = ev.format ? AMERICANO_FORMATS[ev.format] : undefined
   const registrationOpen = ev.registration_open !== false
@@ -266,7 +272,8 @@ export default async function TournamentDetailPage({
   const isFinished = ev.date < todayString() || ev.status === 'finished' || ev.status === 'completed'
 
   let tournamentResults: TournamentResultsView | null = null
-  if (ev.status === 'completed' || ev.status === 'finished') {
+  // (Court Americano results; Lights Out shows its own standings above.)
+  if (!lightsOut && (ev.status === 'completed' || ev.status === 'finished')) {
     const { data: completedTournament } = await supabase
       .from('tournaments')
       .select('id')
@@ -394,7 +401,7 @@ export default async function TournamentDetailPage({
               {ev.format && <span className="text-[10px] text-white/40 font-semibold">{ev.format}</span>}
             </div>
             <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight">{ev.name}</h1>
-            {ev.status === 'active' && (
+            {ev.status === 'active' && !lightsOut && (
               <Link
                 href="/tournament"
                 className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold text-white transition hover:brightness-110"
@@ -447,6 +454,36 @@ export default async function TournamentDetailPage({
               <a href={`/tournament?event=${ev.id}`} className="mt-3 block text-center text-sm font-semibold underline" style={{ color: '#ff6b35' }}>
                 Live fixtures &amp; standings →
               </a>
+            </div>
+          )}
+
+          {lightsOut && (
+            <div className="px-6 sm:px-8 py-5 space-y-5" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <div>
+                <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Format</p>
+                <p className="text-lg font-bold text-white mt-1">{lightsOut.name}</p>
+                <p className="text-sm font-semibold" style={{ color: '#ff6b35' }}>
+                  {loStructureLabel(lightsOut)}
+                  {lightsOutState ? ` · ${lightsOutState.courts} courts` : ''}
+                </p>
+              </div>
+
+              {lightsOutState?.standings && (
+                <div>
+                  <h3 className="text-sm font-semibold text-white/90 mb-3">🏆 Final Standings</h3>
+                  <LightsOutStandings standings={lightsOutState.standings} teams={lightsOutTeams} />
+                </div>
+              )}
+
+              <LightsOutRules format={lightsOut} courts={lightsOutState?.courts ?? Math.max(2, Math.round((ev.max_players ?? 16) / 4))} />
+              <ScheduleCard slots={lightsOutSchedule(lightsOut, ev.time)} summary={loStructureLabel(lightsOut)} />
+
+              {lightsOutState && lightsOutState.draw.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-white/90 mb-3">Initial court draw</h3>
+                  <LightsOutDraw draw={lightsOutState.draw} teams={lightsOutTeams} />
+                </div>
+              )}
             </div>
           )}
 

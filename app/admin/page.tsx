@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { getLevel, getLevelColor } from '@/lib/quiz-questions'
 import { createClient } from '@/lib/supabase-client'
 import { TEAM_AMERICANO_FORMAT_NAMES, formatOptionLabel } from '@/lib/team-americano'
+import { LIGHTS_OUT_FORMAT_NAMES } from '@/lib/lights-out'
 
 type UserRow = {
   id: string
@@ -608,6 +609,11 @@ export default function AdminPage() {
                       {formatOptionLabel(f)}
                     </option>
                   ))}
+                  {LIGHTS_OUT_FORMAT_NAMES.map(f => (
+                    <option key={f} value={f}>
+                      {formatOptionLabel(f)}
+                    </option>
+                  ))}
                   <option value="Round Robin">Round Robin</option>
                   <option value="Elimination">Elimination</option>
                   <option value="Team">Team</option>
@@ -1198,6 +1204,11 @@ export default function AdminPage() {
                     <option value="Americano">Americano</option>
                     <option value="Americano 120">Americano 120</option>
                     {TEAM_AMERICANO_FORMAT_NAMES.map(f => (
+                      <option key={f} value={f}>
+                        {formatOptionLabel(f)}
+                      </option>
+                    ))}
+                    {LIGHTS_OUT_FORMAT_NAMES.map(f => (
                       <option key={f} value={f}>
                         {formatOptionLabel(f)}
                       </option>

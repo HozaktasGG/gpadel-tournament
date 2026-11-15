@@ -9,6 +9,7 @@ import {
   taFinalsRound,
   teamAmericanoFormat,
 } from '@/lib/team-americano'
+import { isLightsOut } from '@/lib/lights-out'
 
 export const MATCH_COLUMNS =
   'id, phase, round_number, team1_id, team2_id, team1_score, team2_score, winner_id, match_order'
@@ -98,10 +99,10 @@ export function parseCourts(value: unknown): number | null {
   return value
 }
 
-// True when the event's format may not change: it's a Team Americano event that
-// already has matches (rounds generated). Used by both event-update paths.
+// True when the event's format may not change: it's a Team Americano or Lights Out event
+// that already has matches (rounds generated / courts drawn). Used by both event-update paths.
 export async function taFormatLocked(eventId: string, currentFormat: string | null, nextFormat: string | null) {
-  if (!isTeamAmericano(currentFormat) || currentFormat === nextFormat) return false
+  if (!(isTeamAmericano(currentFormat) || isLightsOut(currentFormat)) || currentFormat === nextFormat) return false
   const { count } = await supabaseAdmin
     .from('team_tournament_matches')
     .select('id', { count: 'exact', head: true })

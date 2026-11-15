@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase-server'
+import { isLightsOut } from '@/lib/lights-out'
 
 type EventRow = {
   id: string
@@ -53,8 +54,9 @@ export default async function TournamentsPage({
 
   const events = (data ?? []) as EventRow[]
 
-  const teamEventIds = events.filter(e => e.format === 'Team').map(e => e.id)
-  const americanoEventIds = events.filter(e => e.format !== 'Team').map(e => e.id)
+  const countsTeams = (e: EventRow) => e.format === 'Team' || isLightsOut(e.format)
+  const teamEventIds = events.filter(countsTeams).map(e => e.id)
+  const americanoEventIds = events.filter(e => !countsTeams(e)).map(e => e.id)
 
   const [teamRowsRes, regRowsRes] = await Promise.all([
     teamEventIds.length
@@ -84,7 +86,7 @@ export default async function TournamentsPage({
 
   const countByEvent: Record<string, number> = {}
   for (const ev of events) {
-    countByEvent[ev.id] = ev.format === 'Team'
+    countByEvent[ev.id] = countsTeams(ev)
       ? (teamCountMap.get(ev.id) ?? 0) * 2
       : (regCountMap.get(ev.id) ?? 0)
   }
